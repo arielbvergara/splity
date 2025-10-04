@@ -1,3 +1,4 @@
+using System.Data;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.APIGatewayEvents;
 using System.Text;
@@ -5,6 +6,9 @@ using System.Text.Json;
 using Amazon;
 using Amazon.S3;
 using Splity.Shared.AI;
+using Splity.Shared.Database;
+using Splity.Shared.Database.Models;
+using Splity.Shared.Database.Repositories;
 using Splity.Shared.Storage;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
@@ -14,6 +18,7 @@ namespace Splity.Expenses.Extract;
 
 public class Function
 {
+    private readonly IPartyRepository _partyRepository;
     private readonly IS3BucketService _s3BucketService;
     private readonly IDocumentIntelligenceService _documentIntelligenceService;
 
@@ -22,22 +27,31 @@ public class Function
             Environment.GetEnvironmentVariable("AWS_BUCKET_REGION")!)));
 
     public Function() : this(
-        null)
+        DsqlConnectionHelper.CreateConnection(
+            Environment.GetEnvironmentVariable("CLUSTER_USERNAME"),
+            Environment.GetEnvironmentVariable("CLUSTER_HOSTNAME"),
+            RegionEndpoint.EUWest2.SystemName,
+            Environment.GetEnvironmentVariable("CLUSTER_DATABASE")))
     {
     }
 
-    public Function(IS3BucketService? s3BucketService = null,
-        IDocumentIntelligenceService? documentIntelligenceService = null)
+    public Function(IDbConnection connection,
+        IS3BucketService? s3BucketService = null,
+        IDocumentIntelligenceService? documentIntelligenceService = null,
+        IPartyRepository? partyRepository = null)
     {
-        _s3BucketService = s3BucketService ?? new S3BucketService(
-            S3Client.Value,
-            Environment.GetEnvironmentVariable("AWS_BUCKET_NAME")!,
-            Environment.GetEnvironmentVariable("AWS_BUCKET_REGION")!);
+        _s3BucketService = s3BucketService ??
+                           new S3BucketService(
+                               S3Client.Value,
+                               Environment.GetEnvironmentVariable("AWS_BUCKET_NAME")!,
+                               Environment.GetEnvironmentVariable("AWS_BUCKET_REGION")!);
 
         _documentIntelligenceService = documentIntelligenceService ??
                                        new DocumentIntelligenceService(
                                            Environment.GetEnvironmentVariable("DOCUMENT_INTELLIGENCE_API_KEY")!,
                                            Environment.GetEnvironmentVariable("DOCUMENT_INTELLIGENCE_ENDPOINT")!);
+        _partyRepository = partyRepository ??
+                           new PartyRepository(connection);
     }
 
     /// <summary>
@@ -48,9 +62,10 @@ public class Function
     /// <returns>API Gateway proxy response</returns>
     public async Task<APIGatewayProxyResponse> FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
     {
-        context.Logger.LogInformation($"Processing request: {request.HttpMethod} {request.Path}");
+        var fileName = request.Headers["x-filename"] ?? "uploaded-file";
         try
         {
+            // TODO: Enable this when tests are done
             // if (request.HttpMethod != "PUT")
             // {
             //     return CreateResponse(405, $"Method not allowed: {request.HttpMethod}", GetCorsHeaders());
@@ -58,7 +73,6 @@ public class Function
 
             // Get file content
             byte[] fileContent;
-            const string fileName = "uploaded-file";
 
             // Check if request body is base64 encoded
             if (request.IsBase64Encoded && !string.IsNullOrEmpty(request.Body))
@@ -75,15 +89,27 @@ public class Function
             }
 
             // S3
-            var uploadedFileUrl = await _s3BucketService.UploadFileAsync(fileContent, "expenses", "splity");
+            var uploadedFileUrl = await _s3BucketService.UploadFileAsync(fileContent, fileName, "splity");
+
+            // Create party bill image
+            var createPartyBillImageTask = _partyRepository.CreatePartyBillImageAsync(new CreatePartyBillImageRequest
+            {
+                BillId = Guid.NewGuid(),
+                PartyId = Guid.Parse(request.QueryStringParameters["partyId"]),
+                ImageUrl = uploadedFileUrl,
+                Title = fileName
+            });
 
             // OCR
-            var receipt = await _documentIntelligenceService.AnalyzeReceipt(uploadedFileUrl);
+            var analyzeReceiptTask = _documentIntelligenceService.AnalyzeReceipt(uploadedFileUrl);
+
+            // Await both tasks
+            await Task.WhenAll(createPartyBillImageTask, analyzeReceiptTask);
 
             return CreateResponse(200, JsonSerializer.Serialize(new
             {
                 fileURL = uploadedFileUrl,
-                receipt
+                analyzeReceiptTask.Result
             }), GetCorsHeaders());
         }
         catch (Exception ex)

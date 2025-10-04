@@ -32,3 +32,11 @@ public class GetExpensesRequest
 {
     public Guid PartyId { get; set; }
 }
+
+public class CreatePartyBillImageRequest
+{
+    public required Guid BillId { get; set; }
+    public required Guid PartyId { get; set; }
+    public required string Title { get; set; }
+    public required string ImageUrl { get; set; }
+}
