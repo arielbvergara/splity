@@ -43,5 +43,5 @@ CREATE TABLE PartyBillsImages
     BillId   UUID PRIMARY KEY,
     BillFileTitle TEXT NOT NULL,
     PartyId  UUID NOT NULL, -- Reference to Parties.PartyId
-    ImageURL TEXT NOT NULL,
+    ImageURL TEXT NOT NULL
 );
