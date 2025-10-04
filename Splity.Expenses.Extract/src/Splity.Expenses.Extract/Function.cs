@@ -65,7 +65,13 @@ public class Function
         var fileName = request.Headers["x-filename"] ?? "uploaded-file";
         try
         {
-            // TODO: Enable this when tests are done
+            // Handle CORS preflight requests
+            if (request.HttpMethod == "OPTIONS")
+            {
+                return CreateResponse(200, "", GetCorsHeaders());
+            }
+
+            // // Enable your PUT method validation
             // if (request.HttpMethod != "PUT")
             // {
             //     return CreateResponse(405, $"Method not allowed: {request.HttpMethod}", GetCorsHeaders());
@@ -134,7 +140,7 @@ public class Function
     /// <param name="headers">Response headers</param>
     /// <returns>API Gateway proxy response</returns>
     private APIGatewayProxyResponse CreateResponse(int statusCode, string body,
-        Dictionary<string, string> headers = null)
+        Dictionary<string, string>? headers = null)
     {
         return new APIGatewayProxyResponse
         {
@@ -153,12 +159,13 @@ public class Function
     {
         return new Dictionary<string, string>
         {
-            { "Access-Control-Allow-Origin", "*" },
+            { "Access-Control-Allow-Origin", Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "*" },
             {
                 "Access-Control-Allow-Headers",
                 "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-filename"
             },
-            { "Access-Control-Allow-Methods", "GET,POST,OPTIONS" },
+            { "Access-Control-Allow-Methods", "PUT,OPTIONS" }, // Match your actual HTTP method
+            { "Access-Control-Max-Age", "86400" }, // Cache preflight for 24 hours
             { "Content-Type", "application/json" }
         };
     }
