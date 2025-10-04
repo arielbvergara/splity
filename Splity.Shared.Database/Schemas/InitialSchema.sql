@@ -37,3 +37,11 @@ CREATE TABLE ExpenseParticipants
     Share     NUMERIC(10, 2), -- Optional: how much they contribute
     PRIMARY KEY (ExpenseId, UserId)
 );
+
+CREATE TABLE PartyBillsImages
+(
+    BillId   UUID PRIMARY KEY,
+    BillFileTitle TEXT NOT NULL,
+    PartyId  UUID NOT NULL, -- Reference to Parties.PartyId
+    ImageURL TEXT NOT NULL,
+);
