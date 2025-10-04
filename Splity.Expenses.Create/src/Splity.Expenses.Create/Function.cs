@@ -3,7 +3,10 @@ using Amazon.Lambda.Core;
 using Amazon;
 using Splity.Shared.Database;
 using Splity.Shared.Database.Models;
+using Splity.Shared.Database.Models.Commands;
+using Splity.Shared.Database.Models.Queries;
 using Splity.Shared.Database.Repositories;
+using Splity.Shared.Database.Repositories.Interfaces;
 
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
 
@@ -28,7 +31,7 @@ public class Function
         _expenseRepository = expenseRepository ?? new ExpenseRepository(connection);
     }
 
-    public async Task FunctionHandler(ExpensesCreationRequest request, ILambdaContext context)
+    public async Task FunctionHandler(CreateExpensesRequest request, ILambdaContext context)
     {
         context.Logger.LogInformation(
             $"Processing expenses creation for party {request.PartyId}, payer {request.PayerId} and {request.Expenses.Count()} expenses");

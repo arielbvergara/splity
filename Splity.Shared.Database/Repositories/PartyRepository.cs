@@ -1,13 +1,10 @@
 using System.Data;
 using Npgsql;
 using Splity.Shared.Database.Models;
+using Splity.Shared.Database.Models.Commands;
+using Splity.Shared.Database.Repositories.Interfaces;
 
 namespace Splity.Shared.Database.Repositories;
-
-public interface IPartyRepository
-{
-    Task<int> CreatePartyBillImageAsync(CreatePartyBillImageRequest request);
-}
 
 public class PartyRepository(IDbConnection connection) : IPartyRepository
 {

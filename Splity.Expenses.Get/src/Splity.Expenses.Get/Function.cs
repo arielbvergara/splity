@@ -3,7 +3,9 @@ using Amazon;
 using Amazon.Lambda.Core;
 using Splity.Shared.Database;
 using Splity.Shared.Database.Models;
+using Splity.Shared.Database.Models.Queries;
 using Splity.Shared.Database.Repositories;
+using Splity.Shared.Database.Repositories.Interfaces;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
