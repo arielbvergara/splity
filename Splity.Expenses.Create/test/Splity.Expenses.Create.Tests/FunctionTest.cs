@@ -2,7 +2,10 @@ using System.Data;
 using Amazon.Lambda.Core;
 using Moq;
 using Splity.Shared.Database.Models;
+using Splity.Shared.Database.Models.Commands;
+using Splity.Shared.Database.Models.Queries;
 using Splity.Shared.Database.Repositories;
+using Splity.Shared.Database.Repositories.Interfaces;
 using Xunit;
 
 namespace Splity.Expenses.Create.Tests;
@@ -64,14 +67,14 @@ public class FunctionTests
         var mockLogger = new Mock<ILambdaLogger>();
 
         mockContext.Setup(c => c.Logger).Returns(mockLogger.Object);
-        mockRepository.Setup(r => r.CreateExpensesAsync(It.IsAny<ExpensesCreationRequest>()))
+        mockRepository.Setup(r => r.CreateExpensesAsync(It.IsAny<CreateExpensesRequest>()))
             .ReturnsAsync(2);
 
-        var request = new ExpensesCreationRequest
+        var request = new CreateExpensesRequest
         {
             PartyId = Guid.NewGuid(),
             PayerId = Guid.NewGuid(),
-            Expenses = new List<ExpenseCreate>
+            Expenses = new List<CreateExpenseRequest>
             {
                 new() { Description = "Test Expense 1", Amount = 10.50m },
                 new() { Description = "Test Expense 2", Amount = 25.75m }
@@ -112,11 +115,11 @@ public class ExpenseRepositoryTests
         var mockConnection = new Mock<IDbConnection>();
         var repository = new ExpenseRepository(mockConnection.Object);
 
-        var request = new ExpensesCreationRequest
+        var request = new CreateExpensesRequest
         {
             PartyId = Guid.NewGuid(),
             PayerId = Guid.NewGuid(),
-            Expenses = new List<ExpenseCreate>()
+            Expenses = new List<CreateExpenseRequest>()
         };
 
         // Act & Assert

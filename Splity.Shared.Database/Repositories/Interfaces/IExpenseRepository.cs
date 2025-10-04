@@ -1,9 +1,11 @@
 using Splity.Shared.Database.Models;
+using Splity.Shared.Database.Models.Commands;
+using Splity.Shared.Database.Models.Queries;
 
-namespace Splity.Shared.Database.Repositories;
+namespace Splity.Shared.Database.Repositories.Interfaces;
 
 public interface IExpenseRepository
 {
-    Task<int> CreateExpensesAsync(ExpensesCreationRequest request);
+    Task<int> CreateExpensesAsync(CreateExpensesRequest request);
     Task<IEnumerable<Expense>> GetExpensesAsync(GetExpensesRequest request);
 }
