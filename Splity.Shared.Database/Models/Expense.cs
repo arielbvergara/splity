@@ -14,5 +14,5 @@ public class Expense
     // Navigation properties
     public Party? Party { get; set; }
     public User? Payer { get; set; }
-    public ICollection<ExpenseParticipant>? Participants { get; set; } = new List<ExpenseParticipant>();
+    public ICollection<ExpenseParticipant> Participants { get; set; } = new List<ExpenseParticipant>();
 }

@@ -1,4 +1,5 @@
 using System.Data;
+using System.Net;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.APIGatewayEvents;
 using System.Text;
@@ -6,8 +7,8 @@ using System.Text.Json;
 using Amazon;
 using Amazon.S3;
 using Splity.Shared.AI;
+using Splity.Shared.Common;
 using Splity.Shared.Database;
-using Splity.Shared.Database.Models;
 using Splity.Shared.Database.Models.Commands;
 using Splity.Shared.Database.Repositories;
 using Splity.Shared.Database.Repositories.Interfaces;
@@ -70,7 +71,7 @@ public class Function
             // Handle CORS preflight requests
             if (request.HttpMethod == "OPTIONS")
             {
-                return CreateResponse(200, "", GetCorsHeaders());
+                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, "", GetCorsHeaders());
             }
 
             // // Enable your PUT method validation
@@ -93,7 +94,7 @@ public class Function
             }
             else
             {
-                return CreateResponse(400, "No file content provided", GetCorsHeaders());
+                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest, "No file content provided", GetCorsHeaders());
             }
 
             // S3
@@ -114,7 +115,7 @@ public class Function
             // Await both tasks
             await Task.WhenAll(createPartyBillImageTask, analyzeReceiptTask);
 
-            return CreateResponse(200, JsonSerializer.Serialize(new
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, JsonSerializer.Serialize(new
             {
                 fileURL = uploadedFileUrl,
                 analyzeReceiptTask.Result
@@ -130,27 +131,8 @@ public class Function
                 message = ex.Message
             };
 
-            return CreateResponse(500, JsonSerializer.Serialize(errorResponse), GetCorsHeaders());
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.InternalServerError, JsonSerializer.Serialize(errorResponse), GetCorsHeaders());
         }
-    }
-
-    /// <summary>
-    /// Create a standardized API Gateway response
-    /// </summary>
-    /// <param name="statusCode">HTTP status code</param>
-    /// <param name="body">Response body</param>
-    /// <param name="headers">Response headers</param>
-    /// <returns>API Gateway proxy response</returns>
-    private APIGatewayProxyResponse CreateResponse(int statusCode, string body,
-        Dictionary<string, string>? headers = null)
-    {
-        return new APIGatewayProxyResponse
-        {
-            StatusCode = statusCode,
-            Body = body,
-            Headers = headers ?? new Dictionary<string, string>(),
-            IsBase64Encoded = false
-        };
     }
 
     /// <summary>
@@ -166,7 +148,7 @@ public class Function
                 "Access-Control-Allow-Headers",
                 "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-filename"
             },
-            { "Access-Control-Allow-Methods", "PUT,OPTIONS" }, // Match your actual HTTP method
+            { "Access-Control-Allow-Methods", "PUT,OPTIONS" },
             { "Access-Control-Max-Age", "86400" }, // Cache preflight for 24 hours
             { "Content-Type", "application/json" }
         };

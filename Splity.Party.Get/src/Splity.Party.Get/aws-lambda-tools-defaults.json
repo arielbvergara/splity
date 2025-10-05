@@ -12,5 +12,11 @@
   "function-runtime": "dotnet8",
   "function-memory-size": 512,
   "function-timeout": 30,
-  "function-handler": "Splity.Party.Get::Splity.Party.Get.Function::FunctionHandler"
+  "function-handler": "Splity.Party.Get::Splity.Party.Get.Function::FunctionHandler",
+  "function-name": "SplityGetParty",
+  "environment-variables": {
+    "CLUSTER_HOSTNAME": "",
+    "CLUSTER_USERNAME": "admin",
+    "CLUSTER_DATABASE": "postgres"
+  }
 }
