@@ -84,7 +84,7 @@ public class FunctionTests
         var function = new Function(mockConnection.Object, mockRepository.Object);
 
         // Act
-        await function.FunctionHandler(request, mockContext.Object);
+        var res = await function.FunctionHandler(request, mockContext.Object);
 
         // Assert
         mockRepository.Verify(r => r.CreateExpensesAsync(request), Times.Once);
