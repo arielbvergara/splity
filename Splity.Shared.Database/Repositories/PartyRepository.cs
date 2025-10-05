@@ -3,6 +3,7 @@ using System.Text.Json;
 using Npgsql;
 using Splity.Shared.Database.Models;
 using Splity.Shared.Database.Models.Commands;
+using Splity.Shared.Database.Models.DTOs;
 using Splity.Shared.Database.Repositories.Interfaces;
 
 namespace Splity.Shared.Database.Repositories;
@@ -19,7 +20,7 @@ public class PartyRepository(IDbConnection connection) : IPartyRepository
         return insert.ExecuteNonQuery();
     }
 
-    public async Task<Party> GetPartyById(Guid partyId)
+    public async Task<PartyDto> GetPartyById(Guid partyId)
     {
         await using var select =
             new NpgsqlCommand(GetPartyByIdSql, (NpgsqlConnection)connection);
@@ -34,16 +35,14 @@ public class PartyRepository(IDbConnection connection) : IPartyRepository
         var partyJson = reader.GetString("PartyJson");
 
         // Deserialize the JSON to Party object
-        var party = JsonSerializer.Deserialize<Party>(partyJson, new JsonSerializerOptions
+        return JsonSerializer.Deserialize<PartyDto>(partyJson, new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
-
-        return party;
     }
 
-    public async Task<Party> CreateParty(CreatePartyRequest request)
+    public async Task<PartyDto> CreateParty(CreatePartyRequest request)
     {
         var partyId = Guid.NewGuid();
 
