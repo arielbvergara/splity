@@ -2,7 +2,8 @@ CREATE TABLE Users
 (
     UserId UUID PRIMARY KEY,
     Name   TEXT        NOT NULL,
-    Email  TEXT UNIQUE NOT NULL
+    Email  TEXT UNIQUE NOT NULL,
+    CreatedAt TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE Parties

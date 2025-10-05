@@ -7,4 +7,5 @@ public interface IPartyRepository
 {
     Task<int> CreatePartyBillImageAsync(CreatePartyBillImageRequest request);
     Task<Party> GetPartyById(Guid partyId);
+    Task<Party> CreateParty(CreatePartyRequest request);
 }

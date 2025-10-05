@@ -20,28 +20,45 @@ public class PartyRepository(IDbConnection connection) : IPartyRepository
     }
 
     public async Task<Party> GetPartyById(Guid partyId)
-{
-    await using var select =
-        new NpgsqlCommand(GetPartyByIdSql, (NpgsqlConnection)connection);
-    select.Parameters.AddWithValue("partyId", partyId);
-    await using var reader = await select.ExecuteReaderAsync();
-
-    if (!await reader.ReadAsync())
     {
-        return null; // or throw an exception if party not found
+        await using var select =
+            new NpgsqlCommand(GetPartyByIdSql, (NpgsqlConnection)connection);
+        select.Parameters.AddWithValue("partyId", partyId);
+        await using var reader = await select.ExecuteReaderAsync();
+
+        if (!await reader.ReadAsync())
+        {
+            return null; // or throw an exception if party not found
+        }
+
+        var partyJson = reader.GetString("PartyJson");
+
+        // Deserialize the JSON to Party object
+        var party = JsonSerializer.Deserialize<Party>(partyJson, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        return party;
     }
 
-    var partyJson = reader.GetString("PartyJson");
-
-    // Deserialize the JSON to Party object
-    var party = JsonSerializer.Deserialize<Party>(partyJson, new JsonSerializerOptions
+    public async Task<Party> CreateParty(CreatePartyRequest request)
     {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    });
+        var partyId = Guid.NewGuid();
 
-    return party;
-}
+        var sql = "INSERT INTO Parties(PartyId, OwnerId, Name) VALUES(@partyId, @ownerId, @name)";
+
+        await using var insert = new NpgsqlCommand(sql, (NpgsqlConnection)connection);
+        insert.Parameters.AddWithValue("@partyId", partyId);
+        insert.Parameters.AddWithValue("@ownerId", request.OwnerId);
+        insert.Parameters.AddWithValue("@name", request.Name);
+
+        await insert.ExecuteNonQueryAsync();
+
+        // Return the created party with all its details
+        return await GetPartyById(partyId);
+    }
 
     private const string GetPartyByIdSql = @"WITH party_data AS (
     SELECT
