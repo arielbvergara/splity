@@ -1,7 +1,6 @@
 using System.Data;
 using System.Text.Json;
 using Npgsql;
-using Splity.Shared.Database.Models;
 using Splity.Shared.Database.Models.Commands;
 using Splity.Shared.Database.Models.DTOs;
 using Splity.Shared.Database.Repositories.Interfaces;

@@ -34,28 +34,47 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
     /// <param name="input">The event for the Lambda function handler to process.</param>
     /// <param name="context">The ILambdaContext that provides methods for logging and describing the Lambda environment.</param>
     /// <returns></returns>
-    public async Task<APIGatewayProxyResponse> FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
+    public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request,
+        ILambdaContext context)
     {
-        if (request.HttpMethod == "OPTIONS")
+        if (request.RequestContext.Http.Method == "OPTIONS")
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
         }
 
-        if (request.HttpMethod != "GET")
+        if (request.RequestContext.Http.Method != "GET")
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.MethodNotAllowed, string.Empty, GetCorsHeaders());
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.MethodNotAllowed,
+                JsonSerializer.Serialize(
+                    new
+                    {
+                        Error = $"Invalid request method: {request.RequestContext.Http.Method}"
+                    }),
+                GetCorsHeaders());
         }
 
-        var partyId = request.QueryStringParameters["partyId"];
+        if (request.QueryStringParameters == null ||
+            !request.QueryStringParameters.TryGetValue("partyId", out var partyId))
+        {
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest, JsonSerializer.Serialize(
+                new
+                {
+                    Error = "Missing partyId query parameter"
+                }));
+        }
 
         if (string.IsNullOrEmpty(partyId) || !Guid.TryParse(partyId, out var guidPartyId))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest, string.Empty, GetCorsHeaders());
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest, JsonSerializer.Serialize(
+                new
+                {
+                    Error = "Invalid or missing partyId parameter"
+                }), GetCorsHeaders());
         }
 
         var party = await _partyRepository.GetPartyById(guidPartyId);
 
-        return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, JsonSerializer.Serialize(new
+        return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.OK, JsonSerializer.Serialize(new
         {
             party
         }), GetCorsHeaders());

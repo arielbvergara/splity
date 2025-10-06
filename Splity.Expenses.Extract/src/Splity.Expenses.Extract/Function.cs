@@ -19,42 +19,34 @@ using Splity.Shared.Storage;
 
 namespace Splity.Expenses.Extract;
 
-public class Function
+public class Function(IDbConnection connection,
+    IS3BucketService? s3BucketService = null,
+    IDocumentIntelligenceService? documentIntelligenceService = null,
+    IPartyRepository? partyRepository = null)
 {
-    private readonly IPartyRepository _partyRepository;
-    private readonly IS3BucketService _s3BucketService;
-    private readonly IDocumentIntelligenceService _documentIntelligenceService;
-
     private static readonly Lazy<IAmazonS3> S3Client = new(() =>
         new AmazonS3Client(RegionEndpoint.GetBySystemName(
             Environment.GetEnvironmentVariable("AWS_BUCKET_REGION")!)));
+
+    private readonly IPartyRepository _partyRepository = partyRepository ?? new PartyRepository(connection);
+    private readonly IS3BucketService _s3BucketService = s3BucketService ??
+                       new S3BucketService(
+                           S3Client.Value,
+                           Environment.GetEnvironmentVariable("AWS_BUCKET_NAME")!,
+                           Environment.GetEnvironmentVariable("AWS_BUCKET_REGION")!);
+    private readonly IDocumentIntelligenceService _documentIntelligenceService = documentIntelligenceService ??
+                                   new DocumentIntelligenceService(
+                                       Environment.GetEnvironmentVariable("DOCUMENT_INTELLIGENCE_API_KEY")!,
+                                       Environment.GetEnvironmentVariable("DOCUMENT_INTELLIGENCE_ENDPOINT")!);
 
     public Function() : this(
         DsqlConnectionHelper.CreateConnection(
             Environment.GetEnvironmentVariable("CLUSTER_USERNAME"),
             Environment.GetEnvironmentVariable("CLUSTER_HOSTNAME"),
             RegionEndpoint.EUWest2.SystemName,
-            Environment.GetEnvironmentVariable("CLUSTER_DATABASE")))
+            Environment.GetEnvironmentVariable("CLUSTER_DATABASE")),
+        null, null, null)
     {
-    }
-
-    public Function(IDbConnection connection,
-        IS3BucketService? s3BucketService = null,
-        IDocumentIntelligenceService? documentIntelligenceService = null,
-        IPartyRepository? partyRepository = null)
-    {
-        _s3BucketService = s3BucketService ??
-                           new S3BucketService(
-                               S3Client.Value,
-                               Environment.GetEnvironmentVariable("AWS_BUCKET_NAME")!,
-                               Environment.GetEnvironmentVariable("AWS_BUCKET_REGION")!);
-
-        _documentIntelligenceService = documentIntelligenceService ??
-                                       new DocumentIntelligenceService(
-                                           Environment.GetEnvironmentVariable("DOCUMENT_INTELLIGENCE_API_KEY")!,
-                                           Environment.GetEnvironmentVariable("DOCUMENT_INTELLIGENCE_ENDPOINT")!);
-        _partyRepository = partyRepository ??
-                           new PartyRepository(connection);
     }
 
     /// <summary>
@@ -63,22 +55,42 @@ public class Function
     /// <param name="request">The API Gateway proxy request containing the file data</param>
     /// <param name="context">The ILambdaContext that provides methods for logging and describing the Lambda environment.</param>
     /// <returns>API Gateway proxy response</returns>
-    public async Task<APIGatewayProxyResponse> FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
+    public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request,
+        ILambdaContext context)
     {
-        var fileName = request.Headers["x-filename"] ?? "uploaded-file";
         try
         {
             // Handle CORS preflight requests
-            if (request.HttpMethod == "OPTIONS")
+            if (request.RequestContext.Http.Method == "OPTIONS")
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, "", GetCorsHeaders());
+                return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
             }
 
-            // // Enable your PUT method validation
-            // if (request.HttpMethod != "PUT")
-            // {
-            //     return CreateResponse(405, $"Method not allowed: {request.HttpMethod}", GetCorsHeaders());
-            // }
+            if (request.RequestContext.Http.Method != "PUT")
+            {
+                return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.MethodNotAllowed,
+                    JsonSerializer.Serialize(new { error = $"Method not allowed: {request.RequestContext.Http.Method}" }),
+                    GetCorsHeaders());
+            }
+
+            if (request.QueryStringParameters == null || !request.QueryStringParameters.TryGetValue("partyId", out var partyId))
+            {
+                return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest,
+                    JsonSerializer.Serialize(new { error = "Missing or invalid partyId" }),
+                    GetCorsHeaders());
+            }
+
+            if (!Guid.TryParse(partyId, out var partyIdGuid))
+            {
+                return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest,
+                    JsonSerializer.Serialize(new { error = "Invalid partyId format" }),
+                    GetCorsHeaders());
+            }
+
+            if (request.QueryStringParameters == null || !request.QueryStringParameters.TryGetValue("fileName", out var fileName))
+            {
+                fileName = "default.png";
+            }
 
             // Get file content
             byte[] fileContent;
@@ -94,7 +106,9 @@ public class Function
             }
             else
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest, "No file content provided", GetCorsHeaders());
+                return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest,
+                    JsonSerializer.Serialize(new { error = "No file content provided" }),
+                    GetCorsHeaders());
             }
 
             // S3
@@ -104,7 +118,7 @@ public class Function
             var createPartyBillImageTask = _partyRepository.CreatePartyBillImageAsync(new CreatePartyBillImageRequest
             {
                 BillId = Guid.NewGuid(),
-                PartyId = Guid.Parse(request.QueryStringParameters["partyId"]),
+                PartyId = partyIdGuid,
                 ImageUrl = uploadedFileUrl,
                 Title = fileName
             });
@@ -115,23 +129,18 @@ public class Function
             // Await both tasks
             await Task.WhenAll(createPartyBillImageTask, analyzeReceiptTask);
 
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, JsonSerializer.Serialize(new
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.OK, JsonSerializer.Serialize(new
             {
+                partyId,
                 fileURL = uploadedFileUrl,
                 analyzeReceiptTask.Result
             }), GetCorsHeaders());
         }
         catch (Exception ex)
         {
-            context.Logger.LogError($"Error processing file upload: {ex.Message}");
-
-            var errorResponse = new
-            {
-                error = "Internal server error",
-                message = ex.Message
-            };
-
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.InternalServerError, JsonSerializer.Serialize(errorResponse), GetCorsHeaders());
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.InternalServerError,
+                JsonSerializer.Serialize(new { error = "Internal server error" }),
+                GetCorsHeaders());
         }
     }
 

@@ -24,7 +24,8 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
             Environment.GetEnvironmentVariable("CLUSTER_USERNAME"),
             Environment.GetEnvironmentVariable("CLUSTER_HOSTNAME"),
             RegionEndpoint.EUWest2.SystemName,
-            Environment.GetEnvironmentVariable("CLUSTER_DATABASE")))
+            Environment.GetEnvironmentVariable("CLUSTER_DATABASE")),
+        null)
     {
     }
 
@@ -34,21 +35,21 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
     /// <param name="request">The API Gateway proxy request</param>
     /// <param name="context">The ILambdaContext that provides methods for logging and describing the Lambda environment.</param>
     /// <returns></returns>
-    public async Task<APIGatewayProxyResponse> FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
+    public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
     {
-        if (request.HttpMethod == "OPTIONS")
+        if (request.RequestContext.Http.Method == "OPTIONS")
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
         }
 
-        if (request.HttpMethod != "POST")
+        if (request.RequestContext.Http.Method != "POST")
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.MethodNotAllowed, string.Empty, GetCorsHeaders());
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.MethodNotAllowed, string.Empty, GetCorsHeaders());
         }
 
         if (string.IsNullOrEmpty(request.Body))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest,
                 JsonSerializer.Serialize(new { error = "Request body is required" }), GetCorsHeaders());
         }
 
@@ -62,26 +63,23 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
 
             if (createPartyRequest == null || createPartyRequest.OwnerId == Guid.Empty || string.IsNullOrWhiteSpace(createPartyRequest.Name))
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
+                return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest,
                     JsonSerializer.Serialize(new { error = "OwnerId and Name are required" }), GetCorsHeaders());
             }
 
             var party = await _partyRepository.CreateParty(createPartyRequest);
 
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.Created, JsonSerializer.Serialize(new
-            {
-                party
-            }), GetCorsHeaders());
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.Created, JsonSerializer.Serialize(party), GetCorsHeaders());
         }
         catch (JsonException)
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest,
                 JsonSerializer.Serialize(new { error = "Invalid JSON format" }), GetCorsHeaders());
         }
         catch (Exception ex)
         {
             context.Logger.LogError($"Error creating party: {ex.Message}");
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.InternalServerError,
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.InternalServerError,
                 JsonSerializer.Serialize(new { error = "Internal server error" }), GetCorsHeaders());
         }
     }
