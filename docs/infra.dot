@@ -1,0 +1,19 @@
+digraph INFRA {
+  node [ color = "black", fillcolor = "#E6E6E6", height =1, style = "filled,bold,rounded", fontname = "Arial" ];
+  "SplityCreateExpenses" [ label = "SplityCreateExpenses
+(AWS::Lambda::Function)", shape =rectangle, fillcolor = "#B7E0FF" ];
+  "SplityDeleteExpenses" [ label = "SplityDeleteExpenses
+(AWS::Lambda::Function)", shape =rectangle, fillcolor = "#B7E0FF" ];
+  "SplityExtractExpenses" [ label = "SplityExtractExpenses
+(AWS::Lambda::Function)", shape =rectangle, fillcolor = "#B7E0FF" ];
+  "SplityGetExpenses" [ label = "SplityGetExpenses
+(AWS::Lambda::Function)", shape =rectangle, fillcolor = "#B7E0FF" ];
+  "SplityCreateParty" [ label = "SplityCreateParty
+(AWS::Lambda::Function)", shape =rectangle, fillcolor = "#B7E0FF" ];
+  "SplityDeleteParty" [ label = "SplityDeleteParty
+(AWS::Lambda::Function)", shape =rectangle, fillcolor = "#B7E0FF" ];
+  "SplityGetParty" [ label = "SplityGetParty
+(AWS::Lambda::Function)", shape =rectangle, fillcolor = "#B7E0FF" ];
+  "SplityS3Bucket" [ label = "SplityS3Bucket
+(AWS::S3::Bucket)", shape =cylinder, fillcolor = "#FFF5CD" ];
+}
