@@ -22,7 +22,10 @@ public class ExpenseRepository(IDbConnection connection) : IExpenseRepository
 
     public async Task<IEnumerable<Expense>> GetExpensesAsync(GetExpensesRequest request)
     {
-        await using var select = new NpgsqlCommand("SELECT e.*, pbi.imageUrl FROM Expenses e LEFT JOIN PartyBillsImages pbi ON e.PartyId = pbi.PartyId where e.partyId=@partyId", (NpgsqlConnection)connection);
+        await using var select =
+            new NpgsqlCommand(
+                "SELECT e.*, pbi.imageUrl FROM Expenses e LEFT JOIN PartyBillsImages pbi ON e.PartyId = pbi.PartyId where e.partyId=@partyId",
+                (NpgsqlConnection)connection);
         select.Parameters.AddWithValue("partyId", request.PartyId);
         await using var reader = await select.ExecuteReaderAsync();
         var expenses = new List<Expense>();
@@ -41,5 +44,15 @@ public class ExpenseRepository(IDbConnection connection) : IExpenseRepository
         }
 
         return expenses;
+    }
+
+    public async Task<int> DeleteExpensesByPartyIdAsync(Guid partyId)
+    {
+        const string sql = "DELETE FROM Expenses WHERE PartyId = @partyId";
+
+        await using var delete = new NpgsqlCommand(sql, (NpgsqlConnection)connection);
+        delete.Parameters.AddWithValue("partyId", partyId);
+
+        return await delete.ExecuteNonQueryAsync();
     }
 }

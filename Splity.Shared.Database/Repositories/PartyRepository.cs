@@ -58,6 +58,24 @@ public class PartyRepository(IDbConnection connection) : IPartyRepository
         return await GetPartyById(partyId);
     }
 
+    public async Task<int> DeletePartyById(Guid partyId)
+    {
+        const string sql = @"
+        DELETE FROM ExpenseParticipants 
+        WHERE ExpenseId IN (SELECT ExpenseId FROM Expenses WHERE PartyId = @partyId);
+        
+        DELETE FROM Expenses WHERE PartyId = @partyId;
+        DELETE FROM PartyContributors WHERE PartyId = @partyId;
+        DELETE FROM PartyBillsImages WHERE PartyId = @partyId;
+        DELETE FROM Parties WHERE PartyId = @partyId;
+    ";
+
+        await using var delete = new NpgsqlCommand(sql, (NpgsqlConnection)connection);
+        delete.Parameters.AddWithValue("@partyId", partyId);
+
+        return await delete.ExecuteNonQueryAsync();
+    }
+
     private const string GetPartyByIdSql = @"WITH party_data AS (
     SELECT
         p.PartyId,

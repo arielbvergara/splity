@@ -12,5 +12,11 @@
   "function-runtime": "dotnet8",
   "function-memory-size": 512,
   "function-timeout": 30,
-  "function-handler": "Splity.Party.Delete::Splity.Party.Delete.Function::FunctionHandler"
+  "function-handler": "Splity.Party.Delete::Splity.Party.Delete.Function::FunctionHandler",
+  "function-name": "SplityDeleteParty",
+  "environment-variables": {
+    "CLUSTER_HOSTNAME": "",
+    "CLUSTER_USERNAME": "admin",
+    "CLUSTER_DATABASE": "postgres"
+  }
 }
