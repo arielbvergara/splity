@@ -10,7 +10,13 @@
   "configuration": "Release",
   "function-architecture": "x86_64",
   "function-runtime": "dotnet8",
-  "function-memory-size": 512,
-  "function-timeout": 30,
-  "function-handler": "Splity.Expenses.Delete::Splity.Expenses.Delete.Function::FunctionHandler"
+  "function-memory-size": 128,
+  "function-timeout": 10,
+  "function-handler": "Splity.Expenses.Delete::Splity.Expenses.Delete.Function::FunctionHandler",
+  "function-name": "SplityDeleteExpenses",
+  "environment-variables": {
+    "CLUSTER_HOSTNAME": "",
+    "CLUSTER_USERNAME": "admin",
+    "CLUSTER_DATABASE": "postgres"
+  }
 }

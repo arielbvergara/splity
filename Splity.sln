@@ -43,6 +43,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionIt
 		README.md = README.md
 		.gitignore = .gitignore
 		docs\infra.dot = docs\infra.dot
+		WARP.md = WARP.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Splity.Shared.Common", "Splity.Shared.Common\Splity.Shared.Common.csproj", "{F3F3007B-7AB3-4B22-8FFE-565B04E29E8C}"

@@ -55,4 +55,43 @@ public class ExpenseRepository(IDbConnection connection) : IExpenseRepository
 
         return await delete.ExecuteNonQueryAsync();
     }
+
+    public async Task<bool> DeleteExpenseByIdAsync(Guid expenseId)
+    {
+        const string sql = @"
+        DELETE FROM ExpenseParticipants WHERE ExpenseId = @expenseId;
+        DELETE FROM Expenses WHERE ExpenseId = @expenseId;
+        ";
+
+        await using var delete = new NpgsqlCommand(sql, (NpgsqlConnection)connection);
+        delete.Parameters.AddWithValue("@expenseId", expenseId);
+
+        var rowsAffected = await delete.ExecuteNonQueryAsync();
+        return rowsAffected > 0;
+    }
+
+    public async Task<int> DeleteExpensesByIdsAsync(IEnumerable<Guid> expenseIds)
+    {
+        var expenseIdsList = expenseIds.ToList();
+        if (!expenseIdsList.Any())
+        {
+            return 0;
+        }
+
+        var placeholders = string.Join(", ", expenseIdsList.Select((_, index) => $"@expenseId{index}"));
+        var sql = $@"
+        DELETE FROM ExpenseParticipants WHERE ExpenseId IN ({placeholders});
+        DELETE FROM Expenses WHERE ExpenseId IN ({placeholders});
+        ";
+
+        await using var delete = new NpgsqlCommand(sql, (NpgsqlConnection)connection);
+        
+        for (int i = 0; i < expenseIdsList.Count; i++)
+        {
+            delete.Parameters.AddWithValue($"@expenseId{i}", expenseIdsList[i]);
+        }
+
+        var rowsAffected = await delete.ExecuteNonQueryAsync();
+        return rowsAffected;
+    }
 }
