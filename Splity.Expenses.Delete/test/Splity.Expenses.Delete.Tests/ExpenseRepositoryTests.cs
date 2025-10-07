@@ -9,7 +9,7 @@ namespace Splity.Expenses.Delete.Tests;
 public class ExpenseRepositoryTests
 {
     [Fact]
-    public void Constructor_WithConnection_CreatesInstance()
+    public void Constructor_ShouldCreateInstance_WhenCalledWithValidConnection()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -22,7 +22,7 @@ public class ExpenseRepositoryTests
     }
 
     [Fact]
-    public async Task DeleteExpensesByIdsAsync_EmptyExpenseIdsList_ShouldReturnZero()
+    public async Task DeleteExpensesByIdsAsync_ShouldReturnZero_WhenExpenseIdsListIsEmpty()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();

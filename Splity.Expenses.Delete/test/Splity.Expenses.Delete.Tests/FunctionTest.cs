@@ -13,7 +13,7 @@ namespace Splity.Expenses.Delete.Tests;
 public class FunctionTests
 {
     [Fact]
-    public void Constructor_WithConnection_ShouldNotCreateRealConnection()
+    public void Constructor_ShouldCreateInstance_WhenCalledWithConnection()
     {
         // This test verifies we can create mock constructors without real DB connections
         // The parameterless constructor tries to create a real connection, so we skip testing it
@@ -27,7 +27,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public void Constructor_WithConnection_CreatesInstanceWithDefaultRepository()
+    public void Constructor_ShouldCreateInstanceWithDefaultRepository_WhenCalledWithConnectionOnly()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -40,7 +40,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public void Constructor_WithConnectionAndRepository_CreatesInstanceWithProvidedRepository()
+    public void Constructor_ShouldCreateInstanceWithProvidedRepository_WhenCalledWithConnectionAndRepository()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -54,7 +54,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public async Task FunctionHandler_ValidRequest_CallsRepositoryAndLogs()
+    public async Task FunctionHandler_ShouldReturnOkAndCallRepository_WhenValidDeleteRequest()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -97,7 +97,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public async Task FunctionHandler_NoExpensesDeleted_ReturnsNotFound()
+    public async Task FunctionHandler_ShouldReturnNotFound_WhenNoExpensesDeleted()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -139,7 +139,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public async Task FunctionHandler_OptionsRequest_ReturnsOkWithCorsHeaders()
+    public async Task FunctionHandler_ShouldReturnOkWithCorsHeaders_WhenOptionsRequest()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -170,7 +170,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public async Task FunctionHandler_PostRequest_ReturnsMethodNotAllowed()
+    public async Task FunctionHandler_ShouldReturnMethodNotAllowed_WhenInvalidHttpMethod()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -197,7 +197,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public async Task FunctionHandler_EmptyBody_ReturnsBadRequest()
+    public async Task FunctionHandler_ShouldReturnBadRequest_WhenRequestBodyIsEmpty()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -228,7 +228,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public async Task FunctionHandler_InvalidJson_ReturnsBadRequest()
+    public async Task FunctionHandler_ShouldReturnBadRequest_WhenJsonIsInvalid()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -259,7 +259,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public async Task FunctionHandler_EmptyExpenseIdsList_ReturnsBadRequest()
+    public async Task FunctionHandler_ShouldReturnBadRequest_WhenExpenseIdsListIsEmpty()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -295,7 +295,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public async Task FunctionHandler_NullExpenseIdsList_ReturnsInternalServerError()
+    public async Task FunctionHandler_ShouldReturnInternalServerError_WhenExpenseIdsListIsNull()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -329,7 +329,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public async Task FunctionHandler_RepositoryThrowsException_ReturnsInternalServerError()
+    public async Task FunctionHandler_ShouldReturnInternalServerError_WhenRepositoryThrowsException()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
