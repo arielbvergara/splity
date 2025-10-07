@@ -12,6 +12,11 @@ public class ExpenseRepository(IDbConnection connection) : IExpenseRepository
 {
     public async Task<int> CreateExpensesAsync(CreateExpensesRequest request)
     {
+        if (!request.Expenses.Any())
+        {
+            return 0;
+        }
+
         var sql = request.Expenses.Select(expense =>
             $"INSERT INTO Expenses(ExpenseId, PartyId, PayerId, Description, Amount, CreatedAt) VALUES('{Guid.NewGuid()}', '{request.PartyId}', '{request.PayerId}', '{expense.Description}', {expense.Amount}, '{DateTime.Now.ToString(CultureInfo.InvariantCulture)}')");
 
