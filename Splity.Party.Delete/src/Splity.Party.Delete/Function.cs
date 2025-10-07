@@ -43,12 +43,12 @@ public class Function(
     {
         if (request.RequestContext.Http.Method == "OPTIONS")
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
         }
 
         if (request.RequestContext.Http.Method != "DELETE")
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.MethodNotAllowed,
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.MethodNotAllowed,
                 JsonSerializer.Serialize(
                     new
                     {
@@ -60,7 +60,7 @@ public class Function(
         if (request.QueryStringParameters == null ||
             !request.QueryStringParameters.TryGetValue("partyId", out var partyId))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest, JsonSerializer.Serialize(
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(
                 new
                 {
                     Error = "Missing partyId query parameter"
@@ -69,7 +69,7 @@ public class Function(
 
         if (string.IsNullOrEmpty(partyId) || !Guid.TryParse(partyId, out var guidPartyId))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest, JsonSerializer.Serialize(
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(
                 new
                 {
                     Error = "Invalid or missing partyId parameter"
@@ -82,7 +82,7 @@ public class Function(
             var party = await _partyRepository.GetPartyById(guidPartyId);
             if (party == null)
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest,
+                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
                     JsonSerializer.Serialize(
                         new
                         {
@@ -93,7 +93,7 @@ public class Function(
             // 3. Delete the party
             await _partyRepository.DeletePartyById(guidPartyId);
 
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.OK, JsonSerializer.Serialize(new
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, JsonSerializer.Serialize(new
                 PartyDeleteResponse
                 {
                     Success = true,
@@ -105,7 +105,7 @@ public class Function(
         {
             context.Logger.LogError($"Error deleting party {partyId}: {ex.Message}");
 
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.InternalServerError,
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.InternalServerError,
                 JsonSerializer.Serialize(new
                 {
                     Error = $"Error deleting party {partyId}: {ex.Message}"

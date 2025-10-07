@@ -41,12 +41,12 @@ public class Function(
     {
         if (request.RequestContext.Http.Method == "OPTIONS")
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
         }
 
         if (request.RequestContext.Http.Method != "DELETE")
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.MethodNotAllowed,
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.MethodNotAllowed,
                 JsonSerializer.Serialize(
                     new
                     {
@@ -57,7 +57,7 @@ public class Function(
 
         if (string.IsNullOrEmpty(request.Body))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest,
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
                 JsonSerializer.Serialize(new { Error = "Request body is required" }), GetCorsHeaders());
         }
 
@@ -73,7 +73,7 @@ public class Function(
 
             if (deleteExpensesRequest == null || !deleteExpensesRequest.ExpenseIds.Any())
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest,
+                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
                     JsonSerializer.Serialize(new { Error = "ExpenseIds are required and cannot be empty" }),
                     GetCorsHeaders());
             }
@@ -98,19 +98,19 @@ public class Function(
             context.Logger.LogInformation($"Successfully deleted {deletedCount} out of {expenseIdsList.Count} expenses");
 
             var statusCode = deletedCount > 0 ? HttpStatusCode.OK : HttpStatusCode.NotFound;
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(statusCode, 
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(statusCode,
                 JsonSerializer.Serialize(response), GetCorsHeaders());
         }
         catch (JsonException)
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest,
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
                 JsonSerializer.Serialize(new { Error = "Invalid JSON format" }), GetCorsHeaders());
         }
         catch (Exception ex)
         {
             context.Logger.LogError($"Error deleting expenses: {ex.Message}");
 
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.InternalServerError,
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.InternalServerError,
                 JsonSerializer.Serialize(new
                 {
                     Error = $"Error deleting expenses: {ex.Message}"

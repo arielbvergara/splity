@@ -63,26 +63,26 @@ public class Function(IDbConnection connection,
             // Handle CORS preflight requests
             if (request.RequestContext.Http.Method == "OPTIONS")
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
+                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
             }
 
             if (request.RequestContext.Http.Method != "PUT")
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.MethodNotAllowed,
+                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.MethodNotAllowed,
                     JsonSerializer.Serialize(new { error = $"Method not allowed: {request.RequestContext.Http.Method}" }),
                     GetCorsHeaders());
             }
 
             if (request.QueryStringParameters == null || !request.QueryStringParameters.TryGetValue("partyId", out var partyId))
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest,
+                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
                     JsonSerializer.Serialize(new { error = "Missing or invalid partyId" }),
                     GetCorsHeaders());
             }
 
             if (!Guid.TryParse(partyId, out var partyIdGuid))
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest,
+                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
                     JsonSerializer.Serialize(new { error = "Invalid partyId format" }),
                     GetCorsHeaders());
             }
@@ -106,7 +106,7 @@ public class Function(IDbConnection connection,
             }
             else
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest,
+                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
                     JsonSerializer.Serialize(new { error = "No file content provided" }),
                     GetCorsHeaders());
             }
@@ -129,7 +129,7 @@ public class Function(IDbConnection connection,
             // Await both tasks
             await Task.WhenAll(createPartyBillImageTask, analyzeReceiptTask);
 
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.OK, JsonSerializer.Serialize(new
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, JsonSerializer.Serialize(new
             {
                 partyId,
                 fileURL = uploadedFileUrl,
@@ -138,7 +138,7 @@ public class Function(IDbConnection connection,
         }
         catch (Exception ex)
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.InternalServerError,
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.InternalServerError,
                 JsonSerializer.Serialize(new { error = "Internal server error" }),
                 GetCorsHeaders());
         }
