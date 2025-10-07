@@ -39,12 +39,12 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
     {
         if (request.RequestContext.Http.Method == "OPTIONS")
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
         }
 
         if (request.RequestContext.Http.Method != "GET")
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.MethodNotAllowed,
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.MethodNotAllowed,
                 JsonSerializer.Serialize(
                     new
                     {
@@ -56,7 +56,7 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
         if (request.QueryStringParameters == null ||
             !request.QueryStringParameters.TryGetValue("partyId", out var partyId))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest, JsonSerializer.Serialize(
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(
                 new
                 {
                     Error = "Missing partyId query parameter"
@@ -65,7 +65,7 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
 
         if (string.IsNullOrEmpty(partyId) || !Guid.TryParse(partyId, out var guidPartyId))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest, JsonSerializer.Serialize(
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(
                 new
                 {
                     Error = "Invalid or missing partyId parameter"
@@ -74,7 +74,7 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
 
         var party = await _partyRepository.GetPartyById(guidPartyId);
 
-        return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.OK, JsonSerializer.Serialize(new
+        return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, JsonSerializer.Serialize(new
         {
             party
         }), GetCorsHeaders());

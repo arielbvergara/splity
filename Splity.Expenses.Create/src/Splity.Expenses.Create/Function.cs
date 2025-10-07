@@ -32,18 +32,18 @@ public class Function(IDbConnection connection, IExpenseRepository? expenseRepos
     {
         if (request.RequestContext.Http.Method == "OPTIONS")
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
         }
 
         if (request.RequestContext.Http.Method != "POST")
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.MethodNotAllowed, string.Empty,
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.MethodNotAllowed, string.Empty,
                 GetCorsHeaders());
         }
 
         if (string.IsNullOrEmpty(request.Body))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest,
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
                 JsonSerializer.Serialize(new { error = "Request body is required" }), GetCorsHeaders());
         }
 
@@ -60,7 +60,7 @@ public class Function(IDbConnection connection, IExpenseRepository? expenseRepos
             if (createExpensesRequest == null || createExpensesRequest.PartyId == Guid.Empty ||
                 createExpensesRequest.PayerId == Guid.Empty || !createExpensesRequest.Expenses.Any())
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest,
+                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
                     JsonSerializer.Serialize(new { error = "PartyId, PayerId and Expenses are required" }),
                     GetCorsHeaders());
             }
@@ -72,20 +72,20 @@ public class Function(IDbConnection connection, IExpenseRepository? expenseRepos
 
             context.Logger.LogInformation($"Expenses created: {createdExpensesCount}");
 
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.Created, JsonSerializer.Serialize(new
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.Created, JsonSerializer.Serialize(new
             {
                 expenses = createdExpensesCount
             }), GetCorsHeaders());
         }
         catch (JsonException)
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.BadRequest,
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
                 JsonSerializer.Serialize(new { error = "Invalid JSON format" }), GetCorsHeaders());
         }
         catch (Exception ex)
         {
             context.Logger.LogError($"Error creating expenses: {ex.Message}");
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse2(HttpStatusCode.InternalServerError,
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.InternalServerError,
                 JsonSerializer.Serialize(new { error = "Internal server error" }), GetCorsHeaders());
         }
     }
