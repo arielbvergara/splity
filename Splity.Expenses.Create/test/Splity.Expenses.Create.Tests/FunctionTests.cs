@@ -2,6 +2,7 @@ using System.Data;
 using System.Text.Json;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
+using FluentAssertions;
 using Moq;
 using Splity.Shared.Database.Models;
 using Splity.Shared.Database.Models.Commands;
@@ -26,7 +27,7 @@ public class FunctionTests
         var mockConnection = new Mock<IDbConnection>();
         var function = new Function(mockConnection.Object);
         
-        Assert.NotNull(function);
+        function.Should().NotBeNull();
     }
 
     [Fact]
@@ -39,7 +40,7 @@ public class FunctionTests
         var function = new Function(mockConnection.Object);
 
         // Assert
-        Assert.NotNull(function);
+        function.Should().NotBeNull();
     }
 
     [Fact]
@@ -53,7 +54,7 @@ public class FunctionTests
         var function = new Function(mockConnection.Object, mockRepository.Object);
 
         // Assert
-        Assert.NotNull(function);
+        function.Should().NotBeNull();
     }
 
     [Fact]
@@ -94,9 +95,14 @@ public class FunctionTests
         var res = await function.FunctionHandler(apiRequest, mockContext.Object);
 
         // Assert
-        mockRepository.Verify(r => r.CreateExpensesAsync(It.IsAny<CreateExpensesRequest>()), Times.Once);
-        mockLogger.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains("Processing expenses creation"))), Times.Once);
-        mockLogger.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains("Expenses created: 2"))), Times.Once);
+        res.StatusCode.Should().Be(201, "because a successful creation should return HTTP 201 Created");
+        res.Body.Should().NotBeNullOrEmpty("because the response should contain the result data");
+        res.Body.Should().Contain("expenses", "because the response should contain the expenses count");
+        res.Body.Should().Contain("2", "because 2 expenses should have been created");
+        
+        mockRepository.Verify(r => r.CreateExpensesAsync(It.IsAny<CreateExpensesRequest>()), Times.Once, "because the repository method should be called exactly once");
+        mockLogger.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains("Processing expenses creation"))), Times.Once, "because the processing should be logged");
+        mockLogger.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains("Expenses created: 2"))), Times.Once, "because the result count should be logged");
     }
 
     [Fact]
@@ -122,9 +128,11 @@ public class FunctionTests
         var response = await function.FunctionHandler(apiRequest, mockContext.Object);
 
         // Assert
-        Assert.Equal(200, response.StatusCode);
-        Assert.True(response.Headers.ContainsKey("Access-Control-Allow-Origin"));
-        mockRepository.Verify(r => r.CreateExpensesAsync(It.IsAny<CreateExpensesRequest>()), Times.Never);
+        response.StatusCode.Should().Be(200, "because OPTIONS requests should return OK for CORS preflight");
+        response.Headers.Should().ContainKey("Access-Control-Allow-Origin", "because CORS headers must be present for preflight requests");
+        response.Headers.Should().ContainKey("Access-Control-Allow-Methods", "because allowed methods should be specified");
+        response.Headers.Should().ContainKey("Access-Control-Allow-Headers", "because allowed headers should be specified");
+        mockRepository.Verify(r => r.CreateExpensesAsync(It.IsAny<CreateExpensesRequest>()), Times.Never, "because OPTIONS requests should not process any business logic");
     }
 
     [Fact]
@@ -149,8 +157,8 @@ public class FunctionTests
         var response = await function.FunctionHandler(apiRequest, mockContext.Object);
 
         // Assert
-        Assert.Equal(405, response.StatusCode);
-        mockRepository.Verify(r => r.CreateExpensesAsync(It.IsAny<CreateExpensesRequest>()), Times.Never);
+        response.StatusCode.Should().Be(405, "because only POST and OPTIONS methods should be allowed");
+        mockRepository.Verify(r => r.CreateExpensesAsync(It.IsAny<CreateExpensesRequest>()), Times.Never, "because invalid HTTP methods should not trigger business logic");
     }
 
     [Fact]
@@ -178,8 +186,10 @@ public class FunctionTests
         var response = await function.FunctionHandler(apiRequest, mockContext.Object);
 
         // Assert
-        Assert.Equal(400, response.StatusCode);
-        mockRepository.Verify(r => r.CreateExpensesAsync(It.IsAny<CreateExpensesRequest>()), Times.Never);
+        response.StatusCode.Should().Be(400, "because requests without body should be rejected");
+        response.Body.Should().NotBeNullOrEmpty("because error responses should contain error information");
+        response.Body.Should().Contain("error", "because the response should indicate what went wrong");
+        mockRepository.Verify(r => r.CreateExpensesAsync(It.IsAny<CreateExpensesRequest>()), Times.Never, "because invalid requests should not reach the repository");
     }
 
     [Fact]
@@ -207,7 +217,10 @@ public class FunctionTests
         var response = await function.FunctionHandler(apiRequest, mockContext.Object);
 
         // Assert
-        Assert.Equal(400, response.StatusCode);
-        mockRepository.Verify(r => r.CreateExpensesAsync(It.IsAny<CreateExpensesRequest>()), Times.Never);
+        response.StatusCode.Should().Be(400, "because invalid JSON should be rejected");
+        response.Body.Should().NotBeNullOrEmpty("because error responses should contain error information");
+        response.Body.Should().Contain("error", "because the response should indicate what went wrong");
+        response.Body.Should().Contain("Invalid JSON", "because the error should be specific about JSON parsing failure");
+        mockRepository.Verify(r => r.CreateExpensesAsync(It.IsAny<CreateExpensesRequest>()), Times.Never, "because malformed requests should not reach the repository");
     }
 }

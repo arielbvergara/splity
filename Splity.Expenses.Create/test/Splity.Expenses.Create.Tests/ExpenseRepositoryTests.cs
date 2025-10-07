@@ -1,4 +1,5 @@
 using System.Data;
+using FluentAssertions;
 using Moq;
 using Splity.Shared.Database.Models.Commands;
 using Splity.Shared.Database.Repositories;
@@ -18,7 +19,7 @@ public class ExpenseRepositoryTests
         var repository = new ExpenseRepository(mockConnection.Object);
 
         // Assert
-        Assert.NotNull(repository);
+        repository.Should().NotBeNull("because the constructor should successfully create an instance with a valid connection");
     }
 
     [Fact]
@@ -39,6 +40,6 @@ public class ExpenseRepositoryTests
         var result = await repository.CreateExpensesAsync(request);
 
         // Assert
-        Assert.Equal(0, result);
+        result.Should().Be(0, "because creating zero expenses should return zero as the count of created records");
     }
 }
