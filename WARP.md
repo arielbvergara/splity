@@ -181,11 +181,17 @@ Infrastructure diagram available at `docs/infra.dot`.
 3. **Add projects to solution**:
    ```bash
    # From repository root
-   dotnet sln/src add Splity.{Entity}.{Action}/src/Splity.{Entity}.{Action}/Splity.{Entity}.{Action}.csproj
-   dotnet sln/tests add Splity.{Entity}.{Action}/test/Splity.{Entity}.{Action}.Tests/Splity.{Entity}.{Action}.Tests.csproj
+   dotnet sln Splity.sln add Splity.{Entity}.{Action}/src/Splity.{Entity}.{Action}/Splity.{Entity}.{Action}.csproj
+   dotnet sln Splity.sln add Splity.{Entity}.{Action}/test/Splity.{Entity}.{Action}.Tests/Splity.{Entity}.{Action}.Tests.csproj
    ```
 
-4. **Add test references** (in the test project):
+4. **Add projects to respective solution folder**:
+   ```bash
+    dotnet sln Splity.sln add --solution-folder src Splity.{Entity}.{Action}/src/Splity.{Entity}.{Action}/Splity.{Entity}.{Action}.csproj
+    dotnet sln Splity.sln add --solution-folder tests Splity.{Entity}.{Action}/test/Splity.{Entity}.{Action}.Tests/Splity.{Entity}.{Action}.Tests.csproj
+   ```
+
+5. **Add test references** (in the test project):
    ```bash
    cd ../../test/Splity.{Entity}.{Action}.Tests
    dotnet add reference ../../src/Splity.{Entity}.{Action}/Splity.{Entity}.{Action}.csproj
@@ -193,19 +199,19 @@ Infrastructure diagram available at `docs/infra.dot`.
    dotnet add package FluentAssertions
    ```
 
-5. **Update aws-lambda-tools-defaults.json**:
+6. **Update aws-lambda-tools-defaults.json**:
    ```json
    {
      "Information": [
        "All the command line options for the Lambda command can be specified in this file."
      ],
      "profile": "",
-     "region": "eu-central-1",
+     "region": "eu-west-2",
      "configuration": "Release",
      "function-architecture": "x86_64",
      "function-runtime": "dotnet8",
      "function-memory-size": 128,
-     "function-timeout": 30,
+     "function-timeout": 15,
      "function-handler": "Splity.{Entity}.{Action}::Splity.{Entity}.{Action}.Function::FunctionHandler",
      "function-name": "Splity{Action}{Entity}",
      "environment-variables": {
@@ -219,7 +225,7 @@ Infrastructure diagram available at `docs/infra.dot`.
    }
    ```
 
-6. **Build and test**:
+7. **Build and test**:
    ```bash
    # From repository root
    dotnet build
