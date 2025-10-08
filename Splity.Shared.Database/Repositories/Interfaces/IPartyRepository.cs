@@ -8,5 +8,6 @@ public interface IPartyRepository
     Task<int> CreatePartyBillImageAsync(CreatePartyBillImageRequest request);
     Task<PartyDto?> GetPartyById(Guid partyId);
     Task<PartyDto> CreateParty(CreatePartyRequest request);
+    Task<PartyDto?> UpdateParty(UpdatePartyRequest request);
     Task<int> DeletePartyById(Guid partyId);
 }

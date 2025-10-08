@@ -19,7 +19,7 @@ public class PartyRepository(IDbConnection connection) : IPartyRepository
         return insert.ExecuteNonQuery();
     }
 
-    public async Task<PartyDto> GetPartyById(Guid partyId)
+    public async Task<PartyDto?> GetPartyById(Guid partyId)
     {
         await using var select =
             new NpgsqlCommand(GetPartyByIdSql, (NpgsqlConnection)connection);
@@ -56,6 +56,32 @@ public class PartyRepository(IDbConnection connection) : IPartyRepository
 
         // Return the created party with all its details
         return await GetPartyById(partyId);
+    }
+
+    public async Task<PartyDto?> UpdateParty(UpdatePartyRequest request)
+    {
+        // First check if party exists
+        var existingParty = await GetPartyById(request.PartyId);
+        if (existingParty == null)
+        {
+            return null;
+        }
+
+        var sql = "UPDATE Parties SET Name = @name WHERE PartyId = @partyId";
+
+        await using var update = new NpgsqlCommand(sql, (NpgsqlConnection)connection);
+        update.Parameters.AddWithValue("@partyId", request.PartyId);
+        update.Parameters.AddWithValue("@name", request.Name ?? existingParty.Name);
+
+        var rowsAffected = await update.ExecuteNonQueryAsync();
+
+        if (rowsAffected == 0)
+        {
+            return null;
+        }
+
+        // Return the updated party with all its details
+        return await GetPartyById(request.PartyId);
     }
 
     public async Task<int> DeletePartyById(Guid partyId)
