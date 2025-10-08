@@ -99,10 +99,10 @@ public class UserRepository(IDbConnection connection) : IUserRepository
         return rowsAffected > 0;
     }
 
-    public async Task<UserDto?> GetUserById(Guid userId)
+    public async Task<UserDto?> GetUserByIdWithDetailsAsync(Guid userId)
     {
         await using var select =
-            new NpgsqlCommand(GetUserByIdSql, (NpgsqlConnection)connection);
+            new NpgsqlCommand(GetUserByIdWithDetailsSql, (NpgsqlConnection)connection);
         select.Parameters.AddWithValue("userId", userId);
         await using var reader = await select.ExecuteReaderAsync();
 
@@ -121,7 +121,7 @@ public class UserRepository(IDbConnection connection) : IUserRepository
         });
     }
 
-    private const string GetUserByIdSql = @"WITH user_data AS (
+    private const string GetUserByIdWithDetailsSql = @"WITH user_data AS (
     SELECT
         u.UserId,
         u.Name,

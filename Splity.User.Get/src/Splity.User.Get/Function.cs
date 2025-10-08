@@ -14,17 +14,11 @@ using Splity.Shared.Database.Repositories.Interfaces;
 
 namespace Splity.User.Get;
 
-public class Function(IDbConnection connection, IUserRepository? userRepository = null)
+public class Function(IDbConnection connection, IUserRepository? userRepository = null) : BaseLambdaFunction
 {
     private readonly IUserRepository _userRepository = userRepository ?? new UserRepository(connection);
 
-    public Function() : this(
-        DsqlConnectionHelper.CreateConnection(
-            Environment.GetEnvironmentVariable("CLUSTER_USERNAME"),
-            Environment.GetEnvironmentVariable("CLUSTER_HOSTNAME"),
-            RegionEndpoint.EUWest2.SystemName,
-            Environment.GetEnvironmentVariable("CLUSTER_DATABASE")),
-        null)
+    public Function() : this(CreateDatabaseConnection(), null)
     {
     }
 
@@ -37,74 +31,31 @@ public class Function(IDbConnection connection, IUserRepository? userRepository 
     public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request,
         ILambdaContext context)
     {
-        if (request.RequestContext.Http.Method == "OPTIONS")
+        // Validate HTTP method
+        var methodValidation = ValidateHttpMethod(request, "GET");
+        if (methodValidation != null)
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
-        }
-
-        if (request.RequestContext.Http.Method != "GET")
-        {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.MethodNotAllowed,
-                JsonSerializer.Serialize(
-                    new
-                    {
-                        Error = $"Invalid request method: {request.RequestContext.Http.Method}"
-                    }),
-                GetCorsHeaders());
+            return methodValidation;
         }
 
         if (request.QueryStringParameters == null ||
             !request.QueryStringParameters.TryGetValue("userId", out var userId))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(
-                new
-                {
-                    Error = "Missing userId query parameter"
-                }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Missing userId query parameter", "GET");
         }
 
         if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var guidUserId))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(
-                new
-                {
-                    Error = "Invalid or missing userId parameter"
-                }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid or missing userId parameter", "GET");
         }
 
-        var user = await _userRepository.GetUserById(guidUserId);
+        var user = await _userRepository.GetUserByIdWithDetailsAsync(guidUserId);
 
         if (user == null)
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.NotFound, JsonSerializer.Serialize(
-                new
-                {
-                    Error = "User not found"
-                }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.NotFound, "User not found", "GET");
         }
 
-        return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, JsonSerializer.Serialize(new
-        {
-            user
-        }), GetCorsHeaders());
-    }
-
-    /// <summary>
-    /// Get CORS headers for cross-origin requests
-    /// </summary>
-    /// <returns>Dictionary of CORS headers</returns>
-    private Dictionary<string, string> GetCorsHeaders()
-    {
-        return new Dictionary<string, string>
-        {
-            { "Access-Control-Allow-Origin", Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "*" },
-            {
-                "Access-Control-Allow-Headers",
-                "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-filename"
-            },
-            { "Access-Control-Allow-Methods", "GET" },
-            { "Access-Control-Max-Age", "86400" }, // Cache preflight for 24 hours
-            { "Content-Type", "application/json" }
-        };
+        return CreateSuccessResponse(HttpStatusCode.OK, new { user }, "GET");
     }
 }

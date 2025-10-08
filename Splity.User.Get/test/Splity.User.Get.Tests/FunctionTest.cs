@@ -69,7 +69,7 @@ public class FunctionTests
             CreatedAt = DateTime.UtcNow
         };
         
-        mockRepository.GetUserById(userId).Returns(expectedUser);
+        mockRepository.GetUserByIdWithDetailsAsync(userId).Returns(expectedUser);
 
         var apiRequest = new APIGatewayHttpApiV2ProxyRequest
         {
@@ -94,7 +94,7 @@ public class FunctionTests
         res.Body.Should().Contain(expectedUser.Name, "because the response should contain the user name");
         res.Body.Should().Contain(expectedUser.Email, "because the response should contain the user email");
         
-        await mockRepository.Received(1).GetUserById(userId);
+        await mockRepository.Received(1).GetUserByIdWithDetailsAsync(userId);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public class FunctionTests
         
         var userId = Guid.NewGuid();
         
-        mockRepository.GetUserById(userId).Returns((UserDto?)null);
+        mockRepository.GetUserByIdWithDetailsAsync(userId).Returns((UserDto?)null);
 
         var apiRequest = new APIGatewayHttpApiV2ProxyRequest
         {
@@ -128,10 +128,10 @@ public class FunctionTests
         // Assert
         res.StatusCode.Should().Be(404, "because a non-existent user should return HTTP 404 Not Found");
         res.Body.Should().NotBeNullOrEmpty("because the response should contain error information");
-        res.Body.Should().Contain("Error", "because the response should indicate what went wrong");
+        res.Body.Should().Contain("error", "because the response should indicate what went wrong");
         res.Body.Should().Contain("User not found", "because the error should specify that the user was not found");
         
-        await mockRepository.Received(1).GetUserById(userId);
+        await mockRepository.Received(1).GetUserByIdWithDetailsAsync(userId);
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public class FunctionTests
         response.Headers.Should().ContainKey("Access-Control-Allow-Headers", "because allowed headers should be specified");
         response.Headers["Access-Control-Allow-Methods"].Should().Contain("GET", "because GET should be an allowed method");
         
-        await mockRepository.DidNotReceive().GetUserById(Arg.Any<Guid>());
+        await mockRepository.DidNotReceive().GetUserByIdWithDetailsAsync(Arg.Any<Guid>());
     }
 
     [Fact]
@@ -186,7 +186,7 @@ public class FunctionTests
         response.StatusCode.Should().Be(405, "because only GET and OPTIONS methods should be allowed");
         response.Body.Should().Contain("Invalid request method", "because the error should specify the invalid method");
         
-        await mockRepository.DidNotReceive().GetUserById(Arg.Any<Guid>());
+        await mockRepository.DidNotReceive().GetUserByIdWithDetailsAsync(Arg.Any<Guid>());
     }
 
     [Fact]
@@ -213,10 +213,10 @@ public class FunctionTests
         // Assert
         response.StatusCode.Should().Be(400, "because requests without userId query parameter should be rejected");
         response.Body.Should().NotBeNullOrEmpty("because error responses should contain error information");
-        response.Body.Should().Contain("Error", "because the response should indicate what went wrong");
+        response.Body.Should().Contain("error", "because the response should indicate what went wrong");
         response.Body.Should().Contain("Missing userId query parameter", "because the error message should be specific");
         
-        await mockRepository.DidNotReceive().GetUserById(Arg.Any<Guid>());
+        await mockRepository.DidNotReceive().GetUserByIdWithDetailsAsync(Arg.Any<Guid>());
     }
 
     [Fact]
@@ -246,10 +246,10 @@ public class FunctionTests
         // Assert
         response.StatusCode.Should().Be(400, "because requests with empty userId should be rejected");
         response.Body.Should().NotBeNullOrEmpty("because error responses should contain error information");
-        response.Body.Should().Contain("Error", "because the response should indicate what went wrong");
+        response.Body.Should().Contain("error", "because the response should indicate what went wrong");
         response.Body.Should().Contain("Invalid or missing userId parameter", "because the error should specify the validation issue");
         
-        await mockRepository.DidNotReceive().GetUserById(Arg.Any<Guid>());
+        await mockRepository.DidNotReceive().GetUserByIdWithDetailsAsync(Arg.Any<Guid>());
     }
 
     [Fact]
@@ -279,10 +279,10 @@ public class FunctionTests
         // Assert
         response.StatusCode.Should().Be(400, "because requests with invalid GUID format should be rejected");
         response.Body.Should().NotBeNullOrEmpty("because error responses should contain error information");
-        response.Body.Should().Contain("Error", "because the response should indicate what went wrong");
+        response.Body.Should().Contain("error", "because the response should indicate what went wrong");
         response.Body.Should().Contain("Invalid or missing userId parameter", "because the error should specify the validation issue");
         
-        await mockRepository.DidNotReceive().GetUserById(Arg.Any<Guid>());
+        await mockRepository.DidNotReceive().GetUserByIdWithDetailsAsync(Arg.Any<Guid>());
     }
 
     [Fact]
@@ -295,7 +295,7 @@ public class FunctionTests
         
         var userId = Guid.NewGuid();
         
-        mockRepository.GetUserById(userId).Returns(Task.FromException<UserDto?>(new Exception("Database connection failed")));
+        mockRepository.GetUserByIdWithDetailsAsync(userId).Returns(Task.FromException<UserDto?>(new Exception("Database connection failed")));
 
         var apiRequest = new APIGatewayHttpApiV2ProxyRequest
         {
@@ -316,6 +316,6 @@ public class FunctionTests
             await function.FunctionHandler(apiRequest, mockContext)
         );
         
-        await mockRepository.Received(1).GetUserById(userId);
+        await mockRepository.Received(1).GetUserByIdWithDetailsAsync(userId);
     }
 }
