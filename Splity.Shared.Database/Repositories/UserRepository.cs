@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text.Json;
 using Npgsql;
 using Splity.Shared.Database.Models;
 using Splity.Shared.Database.Models.Commands;
@@ -97,4 +98,95 @@ public class UserRepository(IDbConnection connection) : IUserRepository
         var rowsAffected = await command.ExecuteNonQueryAsync();
         return rowsAffected > 0;
     }
+
+    public async Task<UserDto?> GetUserById(Guid userId)
+    {
+        await using var select =
+            new NpgsqlCommand(GetUserByIdSql, (NpgsqlConnection)connection);
+        select.Parameters.AddWithValue("userId", userId);
+        await using var reader = await select.ExecuteReaderAsync();
+
+        if (!await reader.ReadAsync())
+        {
+            return null; // User not found
+        }
+
+        var userJson = reader.GetString("UserJson");
+
+        // Deserialize the JSON to UserDto object
+        return JsonSerializer.Deserialize<UserDto>(userJson, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+    }
+
+    private const string GetUserByIdSql = @"WITH user_data AS (
+    SELECT
+        u.UserId,
+        u.Name,
+        u.Email,
+        u.CreatedAt,
+        (
+            SELECT COALESCE(jsonb_agg(
+                jsonb_build_object(
+                    'PartyId', p.PartyId,
+                    'OwnerId', p.OwnerId,
+                    'Name', p.Name,
+                    'CreatedAt', p.CreatedAt
+                )
+            ), '[]'::jsonb)
+            FROM Parties p
+            WHERE p.OwnerId = u.UserId
+        ) AS OwnedParties,
+        (
+            SELECT COALESCE(jsonb_agg(
+                jsonb_build_object(
+                    'ExpenseId', e.ExpenseId,
+                    'PartyId', e.PartyId,
+                    'PayerId', e.PayerId,
+                    'Description', e.Description,
+                    'Amount', e.Amount,
+                    'CreatedAt', e.CreatedAt
+                )
+            ), '[]'::jsonb)
+            FROM Expenses e
+            WHERE e.PayerId = u.UserId
+        ) AS PaidExpenses,
+        (
+            SELECT COALESCE(jsonb_agg(
+                jsonb_build_object(
+                    'PartyId', pc.PartyId,
+                    'UserId', pc.UserId
+                )
+            ), '[]'::jsonb)
+            FROM PartyContributors pc
+            WHERE pc.UserId = u.UserId
+        ) AS PartyContributions,
+        (
+            SELECT COALESCE(jsonb_agg(
+                jsonb_build_object(
+                    'ExpenseId', ep.ExpenseId,
+                    'UserId', ep.UserId,
+                    'Share', ep.Share
+                )
+            ), '[]'::jsonb)
+            FROM ExpenseParticipants ep
+            WHERE ep.UserId = u.UserId
+        ) AS ExpenseParticipators
+    FROM Users u
+    WHERE u.UserId = :userId
+)
+SELECT
+    jsonb_build_object(
+        'UserId', ud.UserId,
+        'Name', ud.Name,
+        'Email', ud.Email,
+        'CreatedAt', ud.CreatedAt,
+        'OwnedParties', ud.OwnedParties,
+        'PaidExpenses', ud.PaidExpenses,
+        'PartyContributions', ud.PartyContributions,
+        'ExpenseParticipators', ud.ExpenseParticipators
+    )::text AS UserJson
+FROM user_data ud;";
 }
