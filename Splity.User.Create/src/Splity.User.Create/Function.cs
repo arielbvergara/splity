@@ -15,17 +15,11 @@ using Splity.Shared.Database.Repositories.Interfaces;
 
 namespace Splity.User.Create;
 
-public class Function(IDbConnection connection, IUserRepository? userRepository = null)
+public class Function(IDbConnection connection, IUserRepository? userRepository = null) : BaseLambdaFunction
 {
     private readonly IUserRepository _userRepository = userRepository ?? new UserRepository(connection);
 
-    public Function() : this(
-        DsqlConnectionHelper.CreateConnection(
-            Environment.GetEnvironmentVariable("CLUSTER_USERNAME"),
-            Environment.GetEnvironmentVariable("CLUSTER_HOSTNAME"),
-            RegionEndpoint.EUWest2.SystemName,
-            Environment.GetEnvironmentVariable("CLUSTER_DATABASE")),
-        null)
+    public Function() : this(CreateDatabaseConnection(), null)
     {
     }
 
@@ -37,74 +31,44 @@ public class Function(IDbConnection connection, IUserRepository? userRepository 
     /// <returns></returns>
     public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
     {
-        if (request.RequestContext.Http.Method == "OPTIONS")
+        // Validate HTTP method
+        var methodValidation = ValidateHttpMethod(request, "POST");
+        if (methodValidation != null)
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
-        }
-
-        if (request.RequestContext.Http.Method != "POST")
-        {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.MethodNotAllowed, string.Empty, GetCorsHeaders());
+            return methodValidation;
         }
 
         if (string.IsNullOrEmpty(request.Body))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
-                JsonSerializer.Serialize(new { error = "Request body is required" }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Request body is required", "POST");
         }
 
         try
         {
             context.Logger.LogInformation($"Creating user with request body: {request.Body}");
-            var createUserRequest = JsonSerializer.Deserialize<CreateUserRequest>(request.Body, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var createUserRequest = JsonSerializer.Deserialize<CreateUserRequest>(request.Body, JsonOptions);
 
             if (createUserRequest == null || string.IsNullOrWhiteSpace(createUserRequest.Name) || string.IsNullOrWhiteSpace(createUserRequest.Email))
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
-                    JsonSerializer.Serialize(new { error = "Name and Email are required" }), GetCorsHeaders());
+                return CreateErrorResponse(HttpStatusCode.BadRequest, "Name and Email are required", "POST");
             }
 
             var user = await _userRepository.CreateUserAsync(createUserRequest);
 
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.Created, JsonSerializer.Serialize(user), GetCorsHeaders());
+            return CreateSuccessResponse(HttpStatusCode.Created, user, "POST");
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("already exists"))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.Conflict,
-                JsonSerializer.Serialize(new { error = ex.Message }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.Conflict, ex.Message, "POST");
         }
         catch (JsonException)
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
-                JsonSerializer.Serialize(new { error = "Invalid JSON format" }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid JSON format", "POST");
         }
         catch (Exception ex)
         {
             context.Logger.LogError($"Error creating user: {ex.Message}");
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.InternalServerError,
-                JsonSerializer.Serialize(new { error = "Internal server error" }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.InternalServerError, "Internal server error", "POST");
         }
-    }
-
-    /// <summary>
-    /// Get CORS headers for cross-origin requests
-    /// </summary>
-    /// <returns>Dictionary of CORS headers</returns>
-    private Dictionary<string, string> GetCorsHeaders()
-    {
-        return new Dictionary<string, string>
-        {
-            { "Access-Control-Allow-Origin", Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "*" },
-            {
-                "Access-Control-Allow-Headers",
-                "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-filename"
-            },
-            { "Access-Control-Allow-Methods", "POST" },
-            { "Access-Control-Max-Age", "86400" }, // Cache preflight for 24 hours
-            { "Content-Type", "application/json" }
-        };
     }
 }
