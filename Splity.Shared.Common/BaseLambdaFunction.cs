@@ -60,10 +60,9 @@ public abstract class BaseLambdaFunction
         string errorMessage,
         string allowedMethods = "GET,POST,PUT,DELETE")
     {
-        var errorObject = new { error = errorMessage };
         return ApiGatewayHelper.CreateApiGatewayProxyResponse(
             statusCode,
-            JsonSerializer.Serialize(errorObject, JsonOptions),
+            JsonSerializer.Serialize(LambdaFunctionResponseHelper.CreateErrorResponse(errorMessage), JsonOptions),
             GetCorsHeaders(allowedMethods));
     }
 
@@ -81,7 +80,7 @@ public abstract class BaseLambdaFunction
     {
         return ApiGatewayHelper.CreateApiGatewayProxyResponse(
             statusCode,
-            JsonSerializer.Serialize(data, JsonOptions),
+            JsonSerializer.Serialize(LambdaFunctionResponseHelper.CreateSuccessResponse(data), JsonOptions),
             GetCorsHeaders(allowedMethods));
     }
 

@@ -1,11 +1,8 @@
 using System.Data;
 using System.Net;
-using System.Text.Json;
-using Amazon;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
 using Splity.Shared.Common;
-using Splity.Shared.Database;
 using Splity.Shared.Database.Repositories;
 using Splity.Shared.Database.Repositories.Interfaces;
 
@@ -18,7 +15,7 @@ public class Function(IDbConnection connection, IUserRepository? userRepository 
 {
     private readonly IUserRepository _userRepository = userRepository ?? new UserRepository(connection);
 
-    public Function() : this(CreateDatabaseConnection(), null)
+    public Function() : this(CreateDatabaseConnection())
     {
     }
 
@@ -32,7 +29,7 @@ public class Function(IDbConnection connection, IUserRepository? userRepository 
         ILambdaContext context)
     {
         // Validate HTTP method
-        var methodValidation = ValidateHttpMethod(request, "GET");
+        var methodValidation = ValidateHttpMethod(request, HttpMethod.Get.ToString());
         if (methodValidation != null)
         {
             return methodValidation;
@@ -41,21 +38,21 @@ public class Function(IDbConnection connection, IUserRepository? userRepository 
         if (request.QueryStringParameters == null ||
             !request.QueryStringParameters.TryGetValue("userId", out var userId))
         {
-            return CreateErrorResponse(HttpStatusCode.BadRequest, "Missing userId query parameter", "GET");
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Missing userId query parameter", HttpMethod.Get.ToString());
         }
 
         if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var guidUserId))
         {
-            return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid or missing userId parameter", "GET");
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid or missing userId parameter", HttpMethod.Get.ToString());
         }
 
         var user = await _userRepository.GetUserByIdWithDetailsAsync(guidUserId);
 
         if (user == null)
         {
-            return CreateErrorResponse(HttpStatusCode.NotFound, "User not found", "GET");
+            return CreateErrorResponse(HttpStatusCode.NotFound, "User not found", HttpMethod.Get.ToString());
         }
 
-        return CreateSuccessResponse(HttpStatusCode.OK, new { user }, "GET");
+        return CreateSuccessResponse(HttpStatusCode.OK, new { user }, HttpMethod.Get.ToString());
     }
 }
