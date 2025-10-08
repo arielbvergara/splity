@@ -363,7 +363,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public async Task FunctionHandler_ShouldReturnInternalServerError_WhenS3ServiceThrowsException()
+    public async Task FunctionHandler_ShouldReturnInternalServerError_WhenS3ServiceThrowsGenericException()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -396,15 +396,17 @@ public class FunctionTests
         var response = await function.FunctionHandler(apiRequest, mockContext.Object);
 
         // Assert
-        response.StatusCode.Should().Be(500, "because service exceptions should result in HTTP 500 Internal Server Error");
+        response.StatusCode.Should().Be(500, "because generic service exceptions should result in HTTP 500 Internal Server Error");
         response.Body.Should().NotBeNullOrEmpty("because error responses should contain error information");
         response.Body.Should().Contain("Internal server error", "because the response should indicate a server error occurred");
+        response.Body.Should().Contain("An unexpected error occurred while processing the file upload", "because detailed error information should be provided");
         
         mockS3Service.Verify(s => s.UploadFileAsync(It.IsAny<byte[]>(), "test.jpg", "splity"), Times.Once, "because the S3 service should be called before the exception");
+        mockLogger.Verify(l => l.LogError(It.Is<string>(s => s.Contains("Unexpected error processing file upload"))), Times.Once, "because the error should be logged with context");
     }
 
     [Fact]
-    public async Task FunctionHandler_ShouldReturnInternalServerError_WhenDocumentServiceThrowsException()
+    public async Task FunctionHandler_ShouldReturnInternalServerError_WhenDocumentServiceThrowsGenericException()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -443,11 +445,226 @@ public class FunctionTests
         var response = await function.FunctionHandler(apiRequest, mockContext.Object);
 
         // Assert
-        response.StatusCode.Should().Be(500, "because service exceptions should result in HTTP 500 Internal Server Error");
+        response.StatusCode.Should().Be(500, "because generic service exceptions should result in HTTP 500 Internal Server Error");
         response.Body.Should().NotBeNullOrEmpty("because error responses should contain error information");
         response.Body.Should().Contain("Internal server error", "because the response should indicate a server error occurred");
+        response.Body.Should().Contain("An unexpected error occurred while processing the file upload", "because detailed error information should be provided");
         
         mockS3Service.Verify(s => s.UploadFileAsync(It.IsAny<byte[]>(), "test.jpg", "splity"), Times.Once, "because the S3 service should be called");
         mockDocumentService.Verify(d => d.AnalyzeReceipt(uploadedUrl), Times.Once, "because the document service should be called before the exception");
+        mockLogger.Verify(l => l.LogError(It.Is<string>(s => s.Contains("Unexpected error processing file upload"))), Times.Once, "because the error should be logged with context");
+    }
+
+    [Fact]
+    public async Task FunctionHandler_ShouldReturnBadRequest_WhenS3ServiceThrowsArgumentException()
+    {
+        // Arrange
+        var mockConnection = new Mock<IDbConnection>();
+        var mockS3Service = new Mock<IS3BucketService>();
+        var mockDocumentService = new Mock<IDocumentIntelligenceService>();
+        var mockPartyRepository = new Mock<IPartyRepository>();
+        var mockContext = new Mock<ILambdaContext>();
+        var mockLogger = new Mock<ILambdaLogger>();
+
+        mockContext.Setup(c => c.Logger).Returns(mockLogger.Object);
+        mockS3Service.Setup(s => s.UploadFileAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new ArgumentException("Invalid file format"));
+
+        var apiRequest = new APIGatewayHttpApiV2ProxyRequest
+        {
+            Body = "some content",
+            QueryStringParameters = new Dictionary<string, string>
+            {
+                { "partyId", Guid.NewGuid().ToString() },
+                { "fileName", "test.jpg" }
+            }
+        };
+        apiRequest.RequestContext = new();
+        apiRequest.RequestContext.Http = new();
+        apiRequest.RequestContext.Http.Method = "PUT";
+
+        var function = new Function(mockConnection.Object, mockS3Service.Object, mockDocumentService.Object, mockPartyRepository.Object);
+
+        // Act
+        var response = await function.FunctionHandler(apiRequest, mockContext.Object);
+
+        // Assert
+        response.StatusCode.Should().Be(400, "because ArgumentException should result in HTTP 400 Bad Request");
+        response.Body.Should().NotBeNullOrEmpty("because error responses should contain error information");
+        response.Body.Should().Contain("Invalid request parameters", "because the response should indicate parameter validation failed");
+        response.Body.Should().Contain("Invalid file format", "because specific error details should be provided");
+        
+        mockS3Service.Verify(s => s.UploadFileAsync(It.IsAny<byte[]>(), "test.jpg", "splity"), Times.Once, "because the S3 service should be called before the exception");
+        mockLogger.Verify(l => l.LogError(It.Is<string>(s => s.Contains("Argument validation error"))), Times.Once, "because the argument error should be logged");
+    }
+
+    [Fact]
+    public async Task FunctionHandler_ShouldReturnUnauthorized_WhenS3ServiceThrowsUnauthorizedAccessException()
+    {
+        // Arrange
+        var mockConnection = new Mock<IDbConnection>();
+        var mockS3Service = new Mock<IS3BucketService>();
+        var mockDocumentService = new Mock<IDocumentIntelligenceService>();
+        var mockPartyRepository = new Mock<IPartyRepository>();
+        var mockContext = new Mock<ILambdaContext>();
+        var mockLogger = new Mock<ILambdaLogger>();
+
+        mockContext.Setup(c => c.Logger).Returns(mockLogger.Object);
+        mockS3Service.Setup(s => s.UploadFileAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Access denied to S3 bucket"));
+
+        var apiRequest = new APIGatewayHttpApiV2ProxyRequest
+        {
+            Body = "some content",
+            QueryStringParameters = new Dictionary<string, string>
+            {
+                { "partyId", Guid.NewGuid().ToString() },
+                { "fileName", "test.jpg" }
+            }
+        };
+        apiRequest.RequestContext = new();
+        apiRequest.RequestContext.Http = new();
+        apiRequest.RequestContext.Http.Method = "PUT";
+
+        var function = new Function(mockConnection.Object, mockS3Service.Object, mockDocumentService.Object, mockPartyRepository.Object);
+
+        // Act
+        var response = await function.FunctionHandler(apiRequest, mockContext.Object);
+
+        // Assert
+        response.StatusCode.Should().Be(401, "because UnauthorizedAccessException should result in HTTP 401 Unauthorized");
+        response.Body.Should().NotBeNullOrEmpty("because error responses should contain error information");
+        response.Body.Should().Contain("Unauthorized access", "because the response should indicate authorization failed");
+        response.Body.Should().Contain("Access denied to S3 bucket", "because specific error details should be provided");
+        
+        mockS3Service.Verify(s => s.UploadFileAsync(It.IsAny<byte[]>(), "test.jpg", "splity"), Times.Once, "because the S3 service should be called before the exception");
+        mockLogger.Verify(l => l.LogError(It.Is<string>(s => s.Contains("Authorization error"))), Times.Once, "because the authorization error should be logged");
+    }
+
+    [Fact]
+    public async Task FunctionHandler_ShouldReturnTimeout_WhenDocumentServiceThrowsTimeoutException()
+    {
+        // Arrange
+        var mockConnection = new Mock<IDbConnection>();
+        var mockS3Service = new Mock<IS3BucketService>();
+        var mockDocumentService = new Mock<IDocumentIntelligenceService>();
+        var mockPartyRepository = new Mock<IPartyRepository>();
+        var mockContext = new Mock<ILambdaContext>();
+        var mockLogger = new Mock<ILambdaLogger>();
+
+        mockContext.Setup(c => c.Logger).Returns(mockLogger.Object);
+        var uploadedUrl = "https://bucket.s3.amazonaws.com/test.jpg";
+        
+        mockS3Service.Setup(s => s.UploadFileAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(uploadedUrl);
+        mockDocumentService.Setup(d => d.AnalyzeReceipt(It.IsAny<string>()))
+            .ThrowsAsync(new TimeoutException("Document analysis timed out after 30 seconds"));
+        mockPartyRepository.Setup(r => r.CreatePartyBillImageAsync(It.IsAny<CreatePartyBillImageRequest>()))
+            .ReturnsAsync(1);
+
+        var apiRequest = new APIGatewayHttpApiV2ProxyRequest
+        {
+            Body = "some content",
+            QueryStringParameters = new Dictionary<string, string>
+            {
+                { "partyId", Guid.NewGuid().ToString() },
+                { "fileName", "test.jpg" }
+            }
+        };
+        apiRequest.RequestContext = new();
+        apiRequest.RequestContext.Http = new();
+        apiRequest.RequestContext.Http.Method = "PUT";
+
+        var function = new Function(mockConnection.Object, mockS3Service.Object, mockDocumentService.Object, mockPartyRepository.Object);
+
+        // Act
+        var response = await function.FunctionHandler(apiRequest, mockContext.Object);
+
+        // Assert
+        response.StatusCode.Should().Be(408, "because TimeoutException should result in HTTP 408 Request Timeout");
+        response.Body.Should().NotBeNullOrEmpty("because error responses should contain error information");
+        response.Body.Should().Contain("Request timeout", "because the response should indicate the operation timed out");
+        response.Body.Should().Contain("Document analysis timed out after 30 seconds", "because specific timeout details should be provided");
+        
+        mockS3Service.Verify(s => s.UploadFileAsync(It.IsAny<byte[]>(), "test.jpg", "splity"), Times.Once, "because the S3 service should be called");
+        mockDocumentService.Verify(d => d.AnalyzeReceipt(uploadedUrl), Times.Once, "because the document service should be called before the timeout");
+        mockLogger.Verify(l => l.LogError(It.Is<string>(s => s.Contains("Operation timeout"))), Times.Once, "because the timeout error should be logged");
+    }
+
+    [Fact]
+    public async Task FunctionHandler_ShouldProcessAnalyzeReceiptSuccessfully_WhenCompleteReceiptData()
+    {
+        // Arrange
+        var mockConnection = new Mock<IDbConnection>();
+        var mockS3Service = new Mock<IS3BucketService>();
+        var mockDocumentService = new Mock<IDocumentIntelligenceService>();
+        var mockPartyRepository = new Mock<IPartyRepository>();
+        var mockContext = new Mock<ILambdaContext>();
+        var mockLogger = new Mock<ILambdaLogger>();
+
+        mockContext.Setup(c => c.Logger).Returns(mockLogger.Object);
+        
+        var partyId = Guid.NewGuid();
+        var uploadedUrl = "https://bucket.s3.amazonaws.com/detailed-receipt.jpg";
+        var detailedReceipt = new Receipt
+        {
+            MerchantName = "Whole Foods Market",
+            TransactionDate = new DateTimeOffset(2024, 1, 15, 14, 30, 0, TimeSpan.Zero),
+            Items = new List<ReceiptItem>
+            {
+                new() { Description = "Organic Bananas", TotalItemPrice = 3.99, Quantity = 2 },
+                new() { Description = "Almond Milk", TotalItemPrice = 4.99, Quantity = 1 },
+                new() { Description = "Bread - Whole Wheat", TotalItemPrice = 2.49, Quantity = 1 },
+                new() { Description = "Greek Yogurt", TotalItemPrice = 5.99, Quantity = 3 }
+            }
+        };
+
+        mockS3Service.Setup(s => s.UploadFileAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(uploadedUrl);
+        mockDocumentService.Setup(d => d.AnalyzeReceipt(uploadedUrl))
+            .ReturnsAsync(detailedReceipt);
+        mockPartyRepository.Setup(r => r.CreatePartyBillImageAsync(It.IsAny<CreatePartyBillImageRequest>()))
+            .ReturnsAsync(1);
+
+        var fileContent = "fake receipt image data";
+        var base64Content = Convert.ToBase64String(Encoding.UTF8.GetBytes(fileContent));
+        
+        var apiRequest = new APIGatewayHttpApiV2ProxyRequest
+        {
+            Body = base64Content,
+            IsBase64Encoded = true,
+            QueryStringParameters = new Dictionary<string, string>
+            {
+                { "partyId", partyId.ToString() },
+                { "fileName", "grocery-receipt.jpg" }
+            }
+        };
+        apiRequest.RequestContext = new();
+        apiRequest.RequestContext.Http = new();
+        apiRequest.RequestContext.Http.Method = "PUT";
+
+        var function = new Function(mockConnection.Object, mockS3Service.Object, mockDocumentService.Object, mockPartyRepository.Object);
+
+        // Act
+        var response = await function.FunctionHandler(apiRequest, mockContext.Object);
+
+        // Assert
+        response.StatusCode.Should().Be(200, "because a successful file analysis should return HTTP 200 OK");
+        response.Body.Should().NotBeNullOrEmpty("because the response should contain the analysis result data");
+        response.Body.Should().Contain(partyId.ToString(), "because the response should contain the party ID");
+        response.Body.Should().Contain(uploadedUrl, "because the response should contain the uploaded file URL");
+        response.Body.Should().Contain("Whole Foods Market", "because the response should contain the extracted merchant name");
+        response.Body.Should().Contain("Organic Bananas", "because the response should contain extracted item descriptions");
+        response.Body.Should().Contain("3.99", "because the response should contain extracted item prices");
+        response.Body.Should().Contain("2024-01-15", "because the response should contain the transaction date");
+        
+        // Verify all services were called correctly
+        mockS3Service.Verify(s => s.UploadFileAsync(It.IsAny<byte[]>(), "grocery-receipt.jpg", "splity"), Times.Once, "because the file should be uploaded to S3");
+        mockDocumentService.Verify(d => d.AnalyzeReceipt(uploadedUrl), Times.Once, "because the receipt should be analyzed");
+        mockPartyRepository.Verify(r => r.CreatePartyBillImageAsync(It.Is<CreatePartyBillImageRequest>(req => 
+            req.PartyId == partyId && req.ImageUrl == uploadedUrl && req.Title == "grocery-receipt.jpg")), Times.Once, "because the bill image should be created");
+
+        // Verify no errors were logged
+        mockLogger.Verify(l => l.LogError(It.IsAny<string>()), Times.Never, "because no errors should occur during successful processing");
     }
 }
