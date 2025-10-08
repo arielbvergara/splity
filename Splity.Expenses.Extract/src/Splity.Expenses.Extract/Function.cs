@@ -22,7 +22,7 @@ namespace Splity.Expenses.Extract;
 public class Function(IDbConnection connection,
     IS3BucketService? s3BucketService = null,
     IDocumentIntelligenceService? documentIntelligenceService = null,
-    IPartyRepository? partyRepository = null)
+    IPartyRepository? partyRepository = null) : BaseLambdaFunction
 {
     private static readonly Lazy<IAmazonS3> S3Client = new(() =>
         new AmazonS3Client(RegionEndpoint.GetBySystemName(
@@ -39,13 +39,7 @@ public class Function(IDbConnection connection,
                                        Environment.GetEnvironmentVariable("DOCUMENT_INTELLIGENCE_API_KEY")!,
                                        Environment.GetEnvironmentVariable("DOCUMENT_INTELLIGENCE_ENDPOINT")!);
 
-    public Function() : this(
-        DsqlConnectionHelper.CreateConnection(
-            Environment.GetEnvironmentVariable("CLUSTER_USERNAME"),
-            Environment.GetEnvironmentVariable("CLUSTER_HOSTNAME"),
-            RegionEndpoint.EUWest2.SystemName,
-            Environment.GetEnvironmentVariable("CLUSTER_DATABASE")),
-        null, null, null)
+    public Function() : this(CreateDatabaseConnection(), null, null, null)
     {
     }
 
@@ -60,31 +54,21 @@ public class Function(IDbConnection connection,
     {
         try
         {
-            // Handle CORS preflight requests
-            if (request.RequestContext.Http.Method == "OPTIONS")
+            // Validate HTTP method
+            var methodValidation = ValidateHttpMethod(request, "PUT");
+            if (methodValidation != null)
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
-            }
-
-            if (request.RequestContext.Http.Method != "PUT")
-            {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.MethodNotAllowed,
-                    JsonSerializer.Serialize(new { error = $"Method not allowed: {request.RequestContext.Http.Method}" }),
-                    GetCorsHeaders());
+                return methodValidation;
             }
 
             if (request.QueryStringParameters == null || !request.QueryStringParameters.TryGetValue("partyId", out var partyId))
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
-                    JsonSerializer.Serialize(new { error = "Missing or invalid partyId" }),
-                    GetCorsHeaders());
+                return CreateErrorResponse(HttpStatusCode.BadRequest, "Missing or invalid partyId", "PUT");
             }
 
             if (!Guid.TryParse(partyId, out var partyIdGuid))
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
-                    JsonSerializer.Serialize(new { error = "Invalid partyId format" }),
-                    GetCorsHeaders());
+                return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid partyId format", "PUT");
             }
 
             if (request.QueryStringParameters == null || !request.QueryStringParameters.TryGetValue("fileName", out var fileName))
@@ -106,9 +90,7 @@ public class Function(IDbConnection connection,
             }
             else
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
-                    JsonSerializer.Serialize(new { error = "No file content provided" }),
-                    GetCorsHeaders());
+                return CreateErrorResponse(HttpStatusCode.BadRequest, "No file content provided", "PUT");
             }
 
             // S3
@@ -129,59 +111,32 @@ public class Function(IDbConnection connection,
             // Await both tasks
             await Task.WhenAll(createPartyBillImageTask, analyzeReceiptTask);
 
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, JsonSerializer.Serialize(new
+            return CreateSuccessResponse(HttpStatusCode.OK, new
             {
                 partyId,
                 fileURL = uploadedFileUrl,
                 analyzeReceiptTask.Result
-            }), GetCorsHeaders());
+            }, "PUT");
         }
         catch (ArgumentException argEx)
         {
             context.Logger.LogError($"Argument validation error: {argEx.Message}");
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
-                JsonSerializer.Serialize(new { error = "Invalid request parameters", details = argEx.Message }),
-                GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid request parameters", "PUT");
         }
         catch (UnauthorizedAccessException authEx)
         {
             context.Logger.LogError($"Authorization error: {authEx.Message}");
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.Unauthorized,
-                JsonSerializer.Serialize(new { error = "Unauthorized access", details = authEx.Message }),
-                GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.Unauthorized, "Unauthorized access", "PUT");
         }
         catch (TimeoutException timeoutEx)
         {
             context.Logger.LogError($"Operation timeout: {timeoutEx.Message}");
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.RequestTimeout,
-                JsonSerializer.Serialize(new { error = "Request timeout", details = timeoutEx.Message }),
-                GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.RequestTimeout, "Request timeout", "PUT");
         }
         catch (Exception ex)
         {
             context.Logger.LogError($"Unexpected error processing file upload: {ex.Message}");
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.InternalServerError,
-                JsonSerializer.Serialize(new { error = "Internal server error", details = "An unexpected error occurred while processing the file upload" }),
-                GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.InternalServerError, "Internal server error", "PUT");
         }
-    }
-
-    /// <summary>
-    /// Get CORS headers for cross-origin requests
-    /// </summary>
-    /// <returns>Dictionary of CORS headers</returns>
-    private Dictionary<string, string> GetCorsHeaders()
-    {
-        return new Dictionary<string, string>
-        {
-            { "Access-Control-Allow-Origin", Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "*" },
-            {
-                "Access-Control-Allow-Headers",
-                "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-filename"
-            },
-            { "Access-Control-Allow-Methods", "PUT,OPTIONS" },
-            { "Access-Control-Max-Age", "86400" }, // Cache preflight for 24 hours
-            { "Content-Type", "application/json" }
-        };
     }
 }

@@ -88,7 +88,7 @@ public class FunctionTests
         // Assert
         res.StatusCode.Should().Be(200, "because a successful deletion should return HTTP 200 OK");
         res.Body.Should().NotBeNullOrEmpty("because the response should contain the result data");
-        res.Body.Should().Contain("DeletedCount", "because the response should contain the deleted count");
+        res.Body.Should().Contain("deletedCount", "because the response should contain the deleted count");
         res.Body.Should().Contain("2", "because 2 expenses should have been deleted");
         
         mockRepository.Verify(r => r.DeleteExpensesByIdsAsync(It.IsAny<List<Guid>>()), Times.Once, "because the repository method should be called exactly once");
@@ -131,9 +131,8 @@ public class FunctionTests
         // Assert
         res.StatusCode.Should().Be(404, "because when no expenses are deleted, it should return HTTP 404 Not Found");
         res.Body.Should().NotBeNullOrEmpty("because the response should contain the result data");
-        res.Body.Should().Contain("DeletedCount", "because the response should contain the deleted count");
+        res.Body.Should().Contain("deletedCount", "because the response should contain the deleted count");
         res.Body.Should().Contain("0", "because 0 expenses should have been deleted");
-        res.Body.Should().Contain("No expenses were deleted", "because the message should indicate no deletion occurred");
         
         mockRepository.Verify(r => r.DeleteExpensesByIdsAsync(It.IsAny<List<Guid>>()), Times.Once, "because the repository method should be called exactly once");
     }

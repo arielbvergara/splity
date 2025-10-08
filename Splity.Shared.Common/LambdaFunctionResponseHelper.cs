@@ -9,7 +9,6 @@ public static class LambdaFunctionResponseHelper
             Success = true
         };
 
-
     public static LambdaFunctionResponse CreateErrorResponse(string errorMessage) =>
         new()
         {

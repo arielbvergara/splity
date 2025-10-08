@@ -15,17 +15,11 @@ using Splity.Shared.Database.Repositories.Interfaces;
 
 namespace Splity.Party.Update;
 
-public class Function(IDbConnection connection, IPartyRepository? partyRepository = null)
+public class Function(IDbConnection connection, IPartyRepository? partyRepository = null) : BaseLambdaFunction
 {
     private readonly IPartyRepository _partyRepository = partyRepository ?? new PartyRepository(connection);
 
-    public Function() : this(
-        DsqlConnectionHelper.CreateConnection(
-            Environment.GetEnvironmentVariable("CLUSTER_USERNAME"),
-            Environment.GetEnvironmentVariable("CLUSTER_HOSTNAME"),
-            RegionEndpoint.EUWest2.SystemName,
-            Environment.GetEnvironmentVariable("CLUSTER_DATABASE")),
-        null)
+    public Function() : this(CreateDatabaseConnection(), null)
     {
     }
 
@@ -37,49 +31,39 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
     /// <returns></returns>
     public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
     {
-        if (request.RequestContext.Http.Method == "OPTIONS")
+        // Validate HTTP method
+        var methodValidation = ValidateHttpMethod(request, "PUT");
+        if (methodValidation != null)
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
-        }
-
-        if (request.RequestContext.Http.Method != "PUT")
-        {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.MethodNotAllowed, string.Empty, GetCorsHeaders());
+            return methodValidation;
         }
 
         if (string.IsNullOrEmpty(request.Body))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
-                JsonSerializer.Serialize(new { error = "Request body is required" }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Request body is required", "PUT");
         }
 
         // Extract party ID from path parameters
         if (request.PathParameters?.TryGetValue("id", out var partyIdString) != true ||
             !Guid.TryParse(partyIdString, out var partyId))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
-                JsonSerializer.Serialize(new { error = "Valid party ID is required in path" }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Valid party ID is required in path", "PUT");
         }
 
         try
         {
             context.Logger.LogInformation($"Updating party {partyId} with request body: {request.Body}");
-            var updatePartyRequest = JsonSerializer.Deserialize<UpdatePartyRequest>(request.Body, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var updatePartyRequest = JsonSerializer.Deserialize<UpdatePartyRequest>(request.Body, JsonOptions);
 
             if (updatePartyRequest == null)
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
-                    JsonSerializer.Serialize(new { error = "Invalid request format" }), GetCorsHeaders());
+                return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid request format", "PUT");
             }
 
             // Validate that at least one field is provided for update
             if (string.IsNullOrWhiteSpace(updatePartyRequest.Name))
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
-                    JsonSerializer.Serialize(new { error = "At least one field (Name) must be provided for update" }), GetCorsHeaders());
+                return CreateErrorResponse(HttpStatusCode.BadRequest, "At least one field (Name) must be provided for update", "PUT");
             }
 
             // Set the party ID from the path parameter
@@ -89,41 +73,19 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
 
             if (updatedParty == null)
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.NotFound,
-                    JsonSerializer.Serialize(new { error = "Party not found" }), GetCorsHeaders());
+                return CreateErrorResponse(HttpStatusCode.NotFound, "Party not found", "PUT");
             }
 
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, JsonSerializer.Serialize(updatedParty), GetCorsHeaders());
+            return CreateSuccessResponse(HttpStatusCode.OK, updatedParty, "PUT");
         }
         catch (JsonException)
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
-                JsonSerializer.Serialize(new { error = "Invalid JSON format" }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid JSON format", "PUT");
         }
         catch (Exception ex)
         {
             context.Logger.LogError($"Error updating party: {ex.Message}");
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.InternalServerError,
-                JsonSerializer.Serialize(new { error = "Internal server error" }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.InternalServerError, "Internal server error", "PUT");
         }
-    }
-
-    /// <summary>
-    /// Get CORS headers for cross-origin requests
-    /// </summary>
-    /// <returns>Dictionary of CORS headers</returns>
-    private Dictionary<string, string> GetCorsHeaders()
-    {
-        return new Dictionary<string, string>
-        {
-            { "Access-Control-Allow-Origin", Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "*" },
-            {
-                "Access-Control-Allow-Headers",
-                "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-filename"
-            },
-            { "Access-Control-Allow-Methods", "PUT" },
-            { "Access-Control-Max-Age", "86400" }, // Cache preflight for 24 hours
-            { "Content-Type", "application/json" }
-        };
     }
 }

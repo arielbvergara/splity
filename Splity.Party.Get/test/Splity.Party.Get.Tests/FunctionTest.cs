@@ -229,7 +229,7 @@ public class FunctionTests
         // Assert
         response.StatusCode.Should().Be(400, "because requests without partyId query parameter should be rejected");
         response.Body.Should().NotBeNullOrEmpty("because error responses should contain error information");
-        response.Body.Should().Contain("Error", "because the response should indicate what went wrong");
+        response.Body.Should().Contain("errorMessage", "because the response should indicate what went wrong");
         response.Body.Should().Contain("Missing partyId query parameter", "because the error message should be specific");
         mockRepository.Verify(r => r.GetPartyById(It.IsAny<Guid>()), Times.Never, "because invalid requests should not reach the repository");
     }
@@ -264,7 +264,7 @@ public class FunctionTests
         // Assert
         response.StatusCode.Should().Be(400, "because requests with empty partyId should be rejected");
         response.Body.Should().NotBeNullOrEmpty("because error responses should contain error information");
-        response.Body.Should().Contain("Error", "because the response should indicate what went wrong");
+        response.Body.Should().Contain("errorMessage", "because the response should indicate what went wrong");
         response.Body.Should().Contain("Invalid or missing partyId parameter", "because the error should specify the validation issue");
         mockRepository.Verify(r => r.GetPartyById(It.IsAny<Guid>()), Times.Never, "because invalid requests should not reach the repository");
     }
@@ -299,7 +299,7 @@ public class FunctionTests
         // Assert
         response.StatusCode.Should().Be(400, "because requests with invalid GUID format should be rejected");
         response.Body.Should().NotBeNullOrEmpty("because error responses should contain error information");
-        response.Body.Should().Contain("Error", "because the response should indicate what went wrong");
+        response.Body.Should().Contain("errorMessage", "because the response should indicate what went wrong");
         response.Body.Should().Contain("Invalid or missing partyId parameter", "because the error should specify the validation issue");
         mockRepository.Verify(r => r.GetPartyById(It.IsAny<Guid>()), Times.Never, "because invalid requests should not reach the repository");
     }

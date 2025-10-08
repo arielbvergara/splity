@@ -14,17 +14,11 @@ using Splity.Shared.Database.Repositories.Interfaces;
 
 namespace Splity.Party.Get;
 
-public class Function(IDbConnection connection, IPartyRepository? partyRepository = null)
+public class Function(IDbConnection connection, IPartyRepository? partyRepository = null) : BaseLambdaFunction
 {
     private readonly IPartyRepository _partyRepository = partyRepository ?? new PartyRepository(connection);
 
-    public Function() : this(
-        DsqlConnectionHelper.CreateConnection(
-            Environment.GetEnvironmentVariable("CLUSTER_USERNAME"),
-            Environment.GetEnvironmentVariable("CLUSTER_HOSTNAME"),
-            RegionEndpoint.EUWest2.SystemName,
-            Environment.GetEnvironmentVariable("CLUSTER_DATABASE")),
-        null)
+    public Function() : this(CreateDatabaseConnection(), null)
     {
     }
 
@@ -37,65 +31,26 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
     public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request,
         ILambdaContext context)
     {
-        if (request.RequestContext.Http.Method == "OPTIONS")
+        // Validate HTTP method
+        var methodValidation = ValidateHttpMethod(request, "GET");
+        if (methodValidation != null)
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
-        }
-
-        if (request.RequestContext.Http.Method != "GET")
-        {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.MethodNotAllowed,
-                JsonSerializer.Serialize(
-                    new
-                    {
-                        Error = $"Invalid request method: {request.RequestContext.Http.Method}"
-                    }),
-                GetCorsHeaders());
+            return methodValidation;
         }
 
         if (request.QueryStringParameters == null ||
             !request.QueryStringParameters.TryGetValue("partyId", out var partyId))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(
-                new
-                {
-                    Error = "Missing partyId query parameter"
-                }));
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Missing partyId query parameter", "GET");
         }
 
         if (string.IsNullOrEmpty(partyId) || !Guid.TryParse(partyId, out var guidPartyId))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(
-                new
-                {
-                    Error = "Invalid or missing partyId parameter"
-                }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid or missing partyId parameter", "GET");
         }
 
         var party = await _partyRepository.GetPartyById(guidPartyId);
 
-        return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, JsonSerializer.Serialize(new
-        {
-            party
-        }), GetCorsHeaders());
-    }
-
-    /// <summary>
-    /// Get CORS headers for cross-origin requests
-    /// </summary>
-    /// <returns>Dictionary of CORS headers</returns>
-    private Dictionary<string, string> GetCorsHeaders()
-    {
-        return new Dictionary<string, string>
-        {
-            { "Access-Control-Allow-Origin", Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "*" },
-            {
-                "Access-Control-Allow-Headers",
-                "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-filename"
-            },
-            { "Access-Control-Allow-Methods", "GET" },
-            { "Access-Control-Max-Age", "86400" }, // Cache preflight for 24 hours
-            { "Content-Type", "application/json" }
-        };
+        return CreateSuccessResponse(HttpStatusCode.OK, new { party }, "GET");
     }
 }

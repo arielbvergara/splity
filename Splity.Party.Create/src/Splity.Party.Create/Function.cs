@@ -15,17 +15,11 @@ using Splity.Shared.Database.Repositories.Interfaces;
 
 namespace Splity.Party.Create;
 
-public class Function(IDbConnection connection, IPartyRepository? partyRepository = null)
+public class Function(IDbConnection connection, IPartyRepository? partyRepository = null) : BaseLambdaFunction
 {
     private readonly IPartyRepository _partyRepository = partyRepository ?? new PartyRepository(connection);
 
-    public Function() : this(
-        DsqlConnectionHelper.CreateConnection(
-            Environment.GetEnvironmentVariable("CLUSTER_USERNAME"),
-            Environment.GetEnvironmentVariable("CLUSTER_HOSTNAME"),
-            RegionEndpoint.EUWest2.SystemName,
-            Environment.GetEnvironmentVariable("CLUSTER_DATABASE")),
-        null)
+    public Function() : this(CreateDatabaseConnection(), null)
     {
     }
 
@@ -37,69 +31,40 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
     /// <returns></returns>
     public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
     {
-        if (request.RequestContext.Http.Method == "OPTIONS")
+        // Validate HTTP method
+        var methodValidation = ValidateHttpMethod(request, "POST");
+        if (methodValidation != null)
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
-        }
-
-        if (request.RequestContext.Http.Method != "POST")
-        {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.MethodNotAllowed, string.Empty, GetCorsHeaders());
+            return methodValidation;
         }
 
         if (string.IsNullOrEmpty(request.Body))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
-                JsonSerializer.Serialize(new { error = "Request body is required" }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Request body is required", "POST");
         }
 
         try
         {
             context.Logger.LogInformation($"Creating party with request body: {request.Body}");
-            var createPartyRequest = JsonSerializer.Deserialize<CreatePartyRequest>(request.Body, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var createPartyRequest = JsonSerializer.Deserialize<CreatePartyRequest>(request.Body, JsonOptions);
 
             if (createPartyRequest == null || createPartyRequest.OwnerId == Guid.Empty || string.IsNullOrWhiteSpace(createPartyRequest.Name))
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
-                    JsonSerializer.Serialize(new { error = "OwnerId and Name are required" }), GetCorsHeaders());
+                return CreateErrorResponse(HttpStatusCode.BadRequest, "OwnerId and Name are required", "POST");
             }
 
             var party = await _partyRepository.CreateParty(createPartyRequest);
 
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.Created, JsonSerializer.Serialize(party), GetCorsHeaders());
+            return CreateSuccessResponse(HttpStatusCode.Created, party, "POST");
         }
         catch (JsonException)
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
-                JsonSerializer.Serialize(new { error = "Invalid JSON format" }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid JSON format", "POST");
         }
         catch (Exception ex)
         {
             context.Logger.LogError($"Error creating party: {ex.Message}");
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.InternalServerError,
-                JsonSerializer.Serialize(new { error = "Internal server error" }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.InternalServerError, "Internal server error", "POST");
         }
-    }
-
-    /// <summary>
-    /// Get CORS headers for cross-origin requests
-    /// </summary>
-    /// <returns>Dictionary of CORS headers</returns>
-    private Dictionary<string, string> GetCorsHeaders()
-    {
-        return new Dictionary<string, string>
-        {
-            { "Access-Control-Allow-Origin", Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "*" },
-            {
-                "Access-Control-Allow-Headers",
-                "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-filename"
-            },
-            { "Access-Control-Allow-Methods", "POST" },
-            { "Access-Control-Max-Age", "86400" }, // Cache preflight for 24 hours
-            { "Content-Type", "application/json" }
-        };
     }
 }

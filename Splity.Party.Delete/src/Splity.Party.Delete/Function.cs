@@ -18,17 +18,12 @@ namespace Splity.Party.Delete;
 public class Function(
     IDbConnection connection,
     IPartyRepository? partyRepository = null,
-    IExpenseRepository? expenseRepository = null)
+    IExpenseRepository? expenseRepository = null) : BaseLambdaFunction
 {
     private readonly IPartyRepository _partyRepository = partyRepository ?? new PartyRepository(connection);
     private readonly IExpenseRepository _expenseRepository = expenseRepository ?? new ExpenseRepository(connection);
 
-    public Function() : this(
-        DsqlConnectionHelper.CreateConnection(
-            Environment.GetEnvironmentVariable("CLUSTER_USERNAME"),
-            Environment.GetEnvironmentVariable("CLUSTER_HOSTNAME"),
-            RegionEndpoint.EUWest2.SystemName,
-            Environment.GetEnvironmentVariable("CLUSTER_DATABASE")))
+    public Function() : this(CreateDatabaseConnection())
     {
     }
 
@@ -41,39 +36,22 @@ public class Function(
     public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request,
         ILambdaContext context)
     {
-        if (request.RequestContext.Http.Method == "OPTIONS")
+        // Validate HTTP method
+        var methodValidation = ValidateHttpMethod(request, "DELETE");
+        if (methodValidation != null)
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, string.Empty, GetCorsHeaders());
-        }
-
-        if (request.RequestContext.Http.Method != "DELETE")
-        {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.MethodNotAllowed,
-                JsonSerializer.Serialize(
-                    new
-                    {
-                        Error = $"Invalid request method: {request.RequestContext.Http.Method}"
-                    }),
-                GetCorsHeaders());
+            return methodValidation;
         }
 
         if (request.QueryStringParameters == null ||
             !request.QueryStringParameters.TryGetValue("partyId", out var partyId))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(
-                new
-                {
-                    Error = "Missing partyId query parameter"
-                }));
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Missing partyId query parameter", "DELETE");
         }
 
         if (string.IsNullOrEmpty(partyId) || !Guid.TryParse(partyId, out var guidPartyId))
         {
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest, JsonSerializer.Serialize(
-                new
-                {
-                    Error = "Invalid or missing partyId parameter"
-                }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid or missing partyId parameter", "DELETE");
         }
 
         try
@@ -82,54 +60,24 @@ public class Function(
             var party = await _partyRepository.GetPartyById(guidPartyId);
             if (party == null)
             {
-                return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
-                    JsonSerializer.Serialize(
-                        new
-                        {
-                            Error = $"Party not found {guidPartyId}"
-                        }), GetCorsHeaders());
+                return CreateErrorResponse(HttpStatusCode.BadRequest, $"Party not found {guidPartyId}", "DELETE");
             }
 
             // 3. Delete the party
             await _partyRepository.DeletePartyById(guidPartyId);
 
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.OK, JsonSerializer.Serialize(new
-                PartyDeleteResponse
-                {
-                    Success = true,
-                    Message = $"Party {guidPartyId} deleted successfully",
-                    PartyId = guidPartyId
-                }), GetCorsHeaders());
+            return CreateSuccessResponse(HttpStatusCode.OK, new PartyDeleteResponse
+            {
+                Success = true,
+                Message = $"Party {guidPartyId} deleted successfully",
+                PartyId = guidPartyId
+            }, "DELETE");
         }
         catch (Exception ex)
         {
             context.Logger.LogError($"Error deleting party {partyId}: {ex.Message}");
-
-            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.InternalServerError,
-                JsonSerializer.Serialize(new
-                {
-                    Error = $"Error deleting party {partyId}: {ex.Message}"
-                }), GetCorsHeaders());
+            return CreateErrorResponse(HttpStatusCode.InternalServerError, $"Error deleting party {partyId}: {ex.Message}", "DELETE");
         }
-    }
-
-    /// <summary>
-    /// Get CORS headers for cross-origin requests
-    /// </summary>
-    /// <returns>Dictionary of CORS headers</returns>
-    private Dictionary<string, string> GetCorsHeaders()
-    {
-        return new Dictionary<string, string>
-        {
-            { "Access-Control-Allow-Origin", Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "*" },
-            {
-                "Access-Control-Allow-Headers",
-                "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-filename"
-            },
-            { "Access-Control-Allow-Methods", "POST" },
-            { "Access-Control-Max-Age", "86400" }, // Cache preflight for 24 hours
-            { "Content-Type", "application/json" }
-        };
     }
 }
 
