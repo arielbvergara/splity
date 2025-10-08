@@ -271,3 +271,17 @@ Infrastructure diagram available at `docs/infra.dot`.
     --environment Variables="{KEY1=VALUE1,KEY2=VALUE2}"
   ```
   Use key=value format separated by commas, not JSON format. Values should match those in `aws-lambda-tools-defaults.json`.
+
+
+### Suggestion on how to write a good enough commit message
+
+Use a subset of the types in the specification.
+- feat: when making changes that are in line with adding code to support a new feature
+- fix: when making code changes to fix previous code
+- refactor: for any other code changes that do not change the functionality and behavior of the code
+- chore: When changing configuration files or other scripts
+- test: When adding tests to the codebase (that were not added alongside the feature itself 😬)
+
+Use the footer to add reference to the Jira issue(s) (if applicable)
+Use the title for a short description which can be readable in git clients or gitlab
+Describe the changes (if the title is not enough) in an imperative way (i.e.: Calculate review score using XYZ method)
