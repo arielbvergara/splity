@@ -263,3 +263,11 @@ Infrastructure diagram available at `docs/infra.dot`.
 - If it exists, it will be updated with new code
 - Environment variables are set automatically from the defaults file
 - Function timeout is set to 30 seconds (adjustable based on requirements)
+- **Environment Variable Updates**: If you need to update environment variables after deployment (e.g., actual hostnames vs placeholders), use:
+  ```bash
+  aws lambda update-function-configuration \
+    --function-name [FunctionName] \
+    --region eu-west-2 \
+    --environment Variables="{KEY1=VALUE1,KEY2=VALUE2}"
+  ```
+  Use key=value format separated by commas, not JSON format. Values should match those in `aws-lambda-tools-defaults.json`.
