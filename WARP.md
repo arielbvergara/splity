@@ -157,3 +157,109 @@ export ALLOWED_ORIGINS="*"
 - API Gateway: HTTP API with Lambda proxy integration
 
 Infrastructure diagram available at `docs/infra.dot`.
+
+## Create new Lambda Function project steps
+
+### Prerequisites
+- Ensure you have the `Amazon.Lambda.Templates` NuGet package installed: `dotnet new install Amazon.Lambda.Templates`
+- Have AWS Lambda Tools installed: `dotnet tool install -g Amazon.Lambda.Tools`
+
+### Steps
+
+1. **Create the Lambda function project**:
+   ```bash
+   # Replace {Entity} and {Action} with your specific values (e.g., Party, Update)
+   dotnet new lambda.EmptyFunction -n Splity.{Entity}.{Action} -o "$(git rev-parse --show-toplevel)/Splity.{Entity}.{Action}"
+   ```
+
+2. **Create the test project**:
+   ```bash
+   # Navigate to the function directory
+   cd "Splity.{Entity}.{Action}"
+   ```
+
+3. **Add projects to solution**:
+   ```bash
+   # From repository root
+   dotnet sln Splity.sln add Splity.{Entity}.{Action}/src/Splity.{Entity}.{Action}/Splity.{Entity}.{Action}.csproj
+   dotnet sln Splity.sln add Splity.{Entity}.{Action}/test/Splity.{Entity}.{Action}.Tests/Splity.{Entity}.{Action}.Tests.csproj
+   ```
+
+4. **Add projects to respective solution folder**:
+   ```bash
+    dotnet sln Splity.sln add --solution-folder src Splity.{Entity}.{Action}/src/Splity.{Entity}.{Action}/Splity.{Entity}.{Action}.csproj
+    dotnet sln Splity.sln add --solution-folder tests Splity.{Entity}.{Action}/test/Splity.{Entity}.{Action}.Tests/Splity.{Entity}.{Action}.Tests.csproj
+   ```
+
+5. **Add test references** (in the test project):
+   ```bash
+   cd ../../test/Splity.{Entity}.{Action}.Tests
+   dotnet add reference ../../src/Splity.{Entity}.{Action}/Splity.{Entity}.{Action}.csproj
+   dotnet add package Amazon.Lambda.TestUtilities
+   dotnet add package FluentAssertions
+   ```
+
+6. **Update aws-lambda-tools-defaults.json**:
+   ```json
+   {
+     "Information": [
+       "All the command line options for the Lambda command can be specified in this file."
+     ],
+     "profile": "",
+     "region": "eu-west-2",
+     "configuration": "Release",
+     "function-architecture": "x86_64",
+     "function-runtime": "dotnet8",
+     "function-memory-size": 128,
+     "function-timeout": 15,
+     "function-handler": "Splity.{Entity}.{Action}::Splity.{Entity}.{Action}.Function::FunctionHandler",
+     "function-name": "Splity{Action}{Entity}",
+     "environment-variables": {
+       "CLUSTER_HOSTNAME": "",
+       "CLUSTER_USERNAME": "admin",
+       "CLUSTER_DATABASE": "postgres",
+       "AWS_BUCKET_NAME": "split-app-v1",
+       "AWS_BUCKET_REGION": "eu-central-1",
+       "ALLOWED_ORIGINS": "*"
+     }
+   }
+   ```
+
+7. **Build and test**:
+   ```bash
+   # From repository root
+   dotnet build
+   dotnet test Splity.{Entity}.{Action}/test/Splity.{Entity}.{Action}.Tests/
+   ```
+
+## Deploy service to AWS
+
+### Prerequisites
+- AWS CLI configured with appropriate credentials
+- AWS Lambda Tools installed: `dotnet tool install -g Amazon.Lambda.Tools`
+- Ensure your function builds successfully: `dotnet build`
+
+### Deployment Steps
+
+1. **Navigate to the Lambda function directory**:
+   ```bash
+   cd Splity.{Entity}.{Action}/src/Splity.{Entity}.{Action}
+   ```
+
+2. **Deploy the function**:
+   ```bash
+   dotnet lambda deploy-function
+   ```
+
+3. **Verify deployment**:
+   ```bash
+   # List your Lambda functions to confirm deployment
+   aws lambda list-functions --query 'Functions[?starts_with(FunctionName, `Splity`)].FunctionName'
+   ```
+
+### Deployment Notes
+- The deployment uses settings from `aws-lambda-tools-defaults.json`
+- If the function doesn't exist, it will be created
+- If it exists, it will be updated with new code
+- Environment variables are set automatically from the defaults file
+- Function timeout is set to 30 seconds (adjustable based on requirements)
