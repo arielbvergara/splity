@@ -136,10 +136,32 @@ public class Function(IDbConnection connection,
                 analyzeReceiptTask.Result
             }), GetCorsHeaders());
         }
+        catch (ArgumentException argEx)
+        {
+            context.Logger.LogError($"Argument validation error: {argEx.Message}");
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.BadRequest,
+                JsonSerializer.Serialize(new { error = "Invalid request parameters", details = argEx.Message }),
+                GetCorsHeaders());
+        }
+        catch (UnauthorizedAccessException authEx)
+        {
+            context.Logger.LogError($"Authorization error: {authEx.Message}");
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.Unauthorized,
+                JsonSerializer.Serialize(new { error = "Unauthorized access", details = authEx.Message }),
+                GetCorsHeaders());
+        }
+        catch (TimeoutException timeoutEx)
+        {
+            context.Logger.LogError($"Operation timeout: {timeoutEx.Message}");
+            return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.RequestTimeout,
+                JsonSerializer.Serialize(new { error = "Request timeout", details = timeoutEx.Message }),
+                GetCorsHeaders());
+        }
         catch (Exception ex)
         {
+            context.Logger.LogError($"Unexpected error processing file upload: {ex.Message}");
             return ApiGatewayHelper.CreateApiGatewayProxyResponse(HttpStatusCode.InternalServerError,
-                JsonSerializer.Serialize(new { error = "Internal server error" }),
+                JsonSerializer.Serialize(new { error = "Internal server error", details = "An unexpected error occurred while processing the file upload" }),
                 GetCorsHeaders());
         }
     }

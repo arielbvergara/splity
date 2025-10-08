@@ -1,11 +1,10 @@
 using System.Data;
 using FluentAssertions;
 using Moq;
-using Splity.Shared.Database.Models.Commands;
 using Splity.Shared.Database.Repositories;
 using Xunit;
 
-namespace Splity.Expenses.Create.Tests;
+namespace Splity.Expenses.Delete.Tests;
 
 public class ExpenseRepositoryTests
 {
@@ -23,23 +22,18 @@ public class ExpenseRepositoryTests
     }
 
     [Fact]
-    public async Task CreateExpensesAsync_ShouldReturnZero_WhenExpensesListIsEmpty()
+    public async Task DeleteExpensesByIdsAsync_ShouldReturnZero_WhenExpenseIdsListIsEmpty()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
         var repository = new ExpenseRepository(mockConnection.Object);
 
-        var request = new CreateExpensesRequest
-        {
-            PartyId = Guid.NewGuid(),
-            PayerId = Guid.NewGuid(),
-            Expenses = new List<CreateExpenseRequest>()
-        };
+        var emptyExpenseIds = new List<Guid>();
 
         // Act
-        var result = await repository.CreateExpensesAsync(request);
+        var result = await repository.DeleteExpensesByIdsAsync(emptyExpenseIds);
 
         // Assert
-        result.Should().Be(0, "because creating zero expenses should return zero as the count of created records");
+        result.Should().Be(0, "because deleting zero expenses should return zero as the count of deleted records");
     }
 }

@@ -17,7 +17,7 @@ public class FunctionTests
 {
 
     [Fact]
-    public void Constructor_WithConnection_ShouldNotCreateRealConnection()
+    public void Constructor_ShouldCreateInstance_WhenCalledWithConnection()
     {
         // This test verifies we can create mock constructors without real DB connections
         // The parameterless constructor tries to create a real connection, so we skip testing it
@@ -31,7 +31,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public void Constructor_WithConnection_CreatesInstanceWithDefaultRepository()
+    public void Constructor_ShouldCreateInstanceWithDefaultRepository_WhenCalledWithConnectionOnly()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -44,7 +44,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public void Constructor_WithConnectionAndRepository_CreatesInstanceWithProvidedRepository()
+    public void Constructor_ShouldCreateInstanceWithProvidedRepository_WhenCalledWithConnectionAndRepository()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -58,7 +58,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public async Task FunctionHandler_ValidRequest_CallsRepositoryAndLogs()
+    public async Task FunctionHandler_ShouldReturnCreatedAndCallRepository_WhenValidCreateRequest()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -106,7 +106,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public async Task FunctionHandler_OptionsRequest_ReturnsOkWithCorsHeaders()
+    public async Task FunctionHandler_ShouldReturnOkWithCorsHeaders_WhenOptionsRequest()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -136,7 +136,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public async Task FunctionHandler_GetRequest_ReturnsMethodNotAllowed()
+    public async Task FunctionHandler_ShouldReturnMethodNotAllowed_WhenInvalidHttpMethod()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -162,7 +162,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public async Task FunctionHandler_EmptyBody_ReturnsBadRequest()
+    public async Task FunctionHandler_ShouldReturnBadRequest_WhenRequestBodyIsEmpty()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
@@ -193,7 +193,7 @@ public class FunctionTests
     }
 
     [Fact]
-    public async Task FunctionHandler_InvalidJson_ReturnsBadRequest()
+    public async Task FunctionHandler_ShouldReturnBadRequest_WhenJsonIsInvalid()
     {
         // Arrange
         var mockConnection = new Mock<IDbConnection>();
