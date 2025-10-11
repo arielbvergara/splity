@@ -100,11 +100,11 @@ Resources:
       RecursiveLoop: Terminate
       SnapStart:
         ApplyOn: None
-      RuntimeManagementConfig:
-        UpdateRuntimeOn: Auto
       Events:
-        ServerlessRestApiDELETEParty:
+        Api1:
           Type: Api
           Properties:
             Path: /Party
-            Method: DELETE
+            Method: ANY
+      RuntimeManagementConfig:
+        UpdateRuntimeOn: Auto
