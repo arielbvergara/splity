@@ -285,3 +285,6 @@ Use a subset of the types in the specification.
 Use the footer to add reference to the Jira issue(s) (if applicable)
 Use the title for a short description which can be readable in git clients or gitlab
 Describe the changes (if the title is not enough) in an imperative way (i.e.: Calculate review score using XYZ method)
+
+### Cloud formation Template:
+The cloud formation template will be build in this file: CloudFormation-Template.yaml

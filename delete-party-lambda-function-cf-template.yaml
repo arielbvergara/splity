@@ -1,0 +1,110 @@
+# This AWS SAM template has been generated from your function's configuration. If
+# your function has one or more triggers, note that the AWS resources associated
+# with these triggers aren't fully specified in this template and include
+# placeholder values. Open this template in AWS Infrastructure Composer or your
+# favorite IDE and modify it to specify a serverless application with other AWS
+# resources.
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: An AWS Serverless Application Model template describing your function.
+Resources:
+  SplityDeleteParty:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Description: ''
+      MemorySize: 512
+      Timeout: 30
+      Handler: Splity.Party.Delete::Splity.Party.Delete.Function::FunctionHandler
+      Runtime: dotnet8
+      Architectures:
+        - x86_64
+      EphemeralStorage:
+        Size: 512
+      Environment:
+        Variables:
+          CLUSTER_DATABASE: postgres
+          CLUSTER_HOSTNAME: 2iabunf7mwjh7ap73ncrsrxhpy.dsql.eu-west-2.on.aws
+          CLUSTER_USERNAME: admin
+      EventInvokeConfig:
+        MaximumEventAgeInSeconds: 21600
+        MaximumRetryAttempts: 2
+      PackageType: Zip
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+            - Sid: DsqlAllPermissions
+              Effect: Allow
+              Action:
+                - dsql:CreateCluster
+                - dsql:GetCluster
+                - dsql:UpdateCluster
+                - dsql:DeleteCluster
+                - dsql:ListClusters
+                - dsql:TagResource
+                - dsql:UntagResource
+                - dsql:ListTagsForResource
+                - dsql:DbConnectAdmin
+                - dsql:DbConnect
+                - dsql:PutMultiRegionProperties
+                - dsql:PutWitnessRegion
+                - dsql:AddPeerCluster
+                - dsql:RemovePeerCluster
+                - dsql:GetVpcEndpointServiceName
+                - dsql:StartBackupJob
+                - dsql:GetBackupJob
+                - dsql:StopBackupJob
+                - dsql:StartRestoreJob
+                - dsql:GetRestoreJob
+                - dsql:StopRestoreJob
+                - dsql:InjectError
+              Resource: '*'
+            - Sid: DsqlConsolePermissions
+              Effect: Allow
+              Action:
+                - tag:GetTagKeys
+                - tag:GetTagValues
+                - cloudwatch:GetMetricData
+                - ec2:DescribeVpcEndpoints
+                - kms:ListAliases
+                - kms:DescribeKey
+              Resource: '*'
+            - Sid: KMSCryptographicPermissions
+              Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:Encrypt
+                - kms:GenerateDataKey
+                - kms:ReEncryptTo
+                - kms:ReEncryptFrom
+              Resource: '*'
+              Condition:
+                StringLike:
+                  kms:ViaService:
+                    - dsql.*.amazonaws.com
+                ForAnyValue:StringEquals:
+                  kms:EncryptionContextKeys: aws:dsql:ClusterId
+            - Sid: CreateDsqlServiceLinkedRole
+              Effect: Allow
+              Action:
+                - iam:CreateServiceLinkedRole
+              Resource: '*'
+              Condition:
+                StringEquals:
+                  iam:AWSServiceName: dsql.amazonaws.com
+      RecursiveLoop: Terminate
+      SnapStart:
+        ApplyOn: None
+      RuntimeManagementConfig:
+        UpdateRuntimeOn: Auto
+      Events:
+        ServerlessRestApiDELETEParty:
+          Type: Api
+          Properties:
+            Path: /Party
+            Method: DELETE

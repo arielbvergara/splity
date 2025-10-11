@@ -1,0 +1,109 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for SplityGatewayApi HTTP API Gateway'
+
+Parameters:
+  LambdaFunctionArn:
+    Type: String
+    Description: Base ARN pattern for Lambda functions (without function name)
+    Default: arn:aws:lambda:eu-west-2:YOUR_ACCOUNT_ID:function
+
+Resources:
+  # HTTP API Gateway
+  SplityGatewayApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: SplityGatewayApi
+      ProtocolType: HTTP
+      RouteSelectionExpression: '$request.method $request.path'
+      ApiKeySelectionExpression: '$request.header.x-api-key'
+
+  # IAM Role for API Gateway to invoke Lambda functions
+  ApiGatewayLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaInvokePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !Sub '${LambdaFunctionArn}:SplityExtractExpenses'
+                  - !Sub '${LambdaFunctionArn}:SplityCreateExpenses'
+                  - !Sub '${LambdaFunctionArn}:SplityGetParty'
+                  - !Sub '${LambdaFunctionArn}:SplityDeleteParty'
+                  - !Sub '${LambdaFunctionArn}:SplityCreateParty'
+                  - !Sub '${LambdaFunctionArn}:SplityUpdateUser'
+                  - !Sub '${LambdaFunctionArn}:SplityCreateUser'
+                  - !Sub '${LambdaFunctionArn}:SplityDeleteExpenses'
+
+  # Integrations
+  ExtractExpensesIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref SplityGatewayApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub '${LambdaFunctionArn}:SplityExtractExpenses'
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 30000
+      Description: 'Upload file and extract expenses from it'
+      CredentialsArn: !GetAtt ApiGatewayLambdaRole.Arn
+
+  CreateExpensesIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref SplityGatewayApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub '${LambdaFunctionArn}:SplityCreateExpenses'
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 30000
+      Description: 'Create expenses for a partyId'
+      CredentialsArn: !GetAtt ApiGatewayLambdaRole.Arn
+
+  GetPartyIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref SplityGatewayApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub '${LambdaFunctionArn}:SplityGetParty'
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 30000
+      Description: 'Get party information by partyId'
+      CredentialsArn: !GetAtt ApiGatewayLambdaRole.Arn
+
+  DeletePartyIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref SplityGatewayApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub '${LambdaFunctionArn}:SplityDeleteParty'
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 30000
+      Description: 'Delete party by id (and all related records)'
+      CredentialsArn: !GetAtt ApiGatewayLambdaRole.Arn
+
+  CreatePartyIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref SplityGatewayApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub '${LambdaFunctionArn}:SplityCreateParty'
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 30000
+      Description: 'Create party'
+      CredentialsArn: !GetAtt ApiGatewayLambdaRole.Arn
+
+  UpdateUserIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref SplityGatewayApi
+
