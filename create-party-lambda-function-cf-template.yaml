@@ -1,4 +1,4 @@
-a# This AWS SAM template has been generated from your function's configuration. If
+# This AWS SAM template has been generated from your function's configuration. If
 # your function has one or more triggers, note that the AWS resources associated
 # with these triggers aren't fully specified in this template and include
 # placeholder values. Open this template in AWS Infrastructure Composer or your
