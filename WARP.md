@@ -286,5 +286,72 @@ Use the footer to add reference to the Jira issue(s) (if applicable)
 Use the title for a short description which can be readable in git clients or gitlab
 Describe the changes (if the title is not enough) in an imperative way (i.e.: Calculate review score using XYZ method)
 
-### Cloud formation Template:
-The cloud formation template will be build in this file: CloudFormation-Template.yaml
+### CloudFormation Templates
+
+#### Party Infrastructure Template
+The Party entity infrastructure is defined in `party-infrastructure-cf-template.yaml`.
+
+**Deploy Party Infrastructure:**
+```bash
+# Deploy Party infrastructure stack
+aws cloudformation deploy \
+  --template-file party-infrastructure-cf-template.yaml \
+  --stack-name splity-party-infrastructure-dev \
+  --parameter-overrides Environment=dev \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --region eu-west-2
+
+# Update stack parameters
+aws cloudformation deploy \
+  --template-file party-infrastructure-cf-template.yaml \
+  --stack-name splity-party-infrastructure-dev \
+  --parameter-overrides \
+    Environment=dev \
+    ClusterHostname=your-cluster-hostname \
+    S3BucketName=split-app-v1 \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --region eu-west-2
+```
+
+**Deploy Lambda Code After Infrastructure:**
+After deploying the infrastructure, update the Lambda functions with actual code:
+```bash
+# Deploy each Party Lambda function
+cd Splity.Party.Create/src/Splity.Party.Create
+dotnet lambda deploy-function --function-name SplityCreateParty-dev
+
+cd ../../../Splity.Party.Get/src/Splity.Party.Get
+dotnet lambda deploy-function --function-name SplityGetParty-dev
+
+cd ../../../Splity.Party.Update/src/Splity.Party.Update
+dotnet lambda deploy-function --function-name SplityUpdateParty-dev
+
+cd ../../../Splity.Party.Delete/src/Splity.Party.Delete
+dotnet lambda deploy-function --function-name SplityDeleteParty-dev
+```
+
+**Stack Outputs:**
+The template provides these outputs:
+- `ApiGatewayUrl`: API endpoint for Party operations
+- `ApiGatewayId`: API Gateway ID for reference
+- Function ARNs for all Party Lambda functions
+- IAM Role ARN for Lambda execution
+
+#### Template Features
+- **Environment-specific deployments** (dev, staging, prod)
+- **Complete CRUD operations** for Party entity
+- **API Gateway HTTP API** with CORS support
+- **RESTful routes**:
+  - `POST /party` - Create party
+  - `GET /party/{id}` - Get party by ID
+  - `PUT /party/{id}` - Update party by ID
+  - `DELETE /party/{id}` - Delete party by ID
+- **IAM roles and permissions** for DSQL and KMS
+- **Environment variables** configuration
+- **Resource tagging** for organization
+
+#### Future Infrastructure Templates
+Plan to create similar templates for:
+- `expenses-infrastructure-cf-template.yaml` - Expense entity operations
+- `users-infrastructure-cf-template.yaml` - User entity operations
+- `master-infrastructure-cf-template.yaml` - Orchestrates all entity templates

@@ -1,0 +1,435 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for Splity Party entity infrastructure - Lambda functions and API Gateway integration'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name
+    
+  ClusterHostname:
+    Type: String
+    Default: 2iabunf7mwjh7ap73ncrsrxhpy.dsql.eu-west-2.on.aws
+    Description: PostgreSQL cluster hostname
+    
+  ClusterUsername:
+    Type: String
+    Default: admin
+    Description: PostgreSQL cluster username
+    
+  ClusterDatabase:
+    Type: String
+    Default: postgres
+    Description: PostgreSQL database name
+    
+  S3BucketName:
+    Type: String
+    Default: split-app-v1
+    Description: S3 bucket for receipt storage
+    
+  S3BucketRegion:
+    Type: String
+    Default: eu-central-1
+    Description: S3 bucket region
+    
+  AllowedOrigins:
+    Type: String
+    Default: "*"
+    Description: CORS allowed origins
+
+Resources:
+  # IAM Role for Lambda Functions
+  SplityPartyLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'SplityPartyLambdaRole-${Environment}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DsqlPermissions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: DsqlAllPermissions
+                Effect: Allow
+                Action:
+                  - dsql:CreateCluster
+                  - dsql:GetCluster
+                  - dsql:UpdateCluster
+                  - dsql:DeleteCluster
+                  - dsql:ListClusters
+                  - dsql:TagResource
+                  - dsql:UntagResource
+                  - dsql:ListTagsForResource
+                  - dsql:DbConnectAdmin
+                  - dsql:DbConnect
+                  - dsql:PutMultiRegionProperties
+                  - dsql:PutWitnessRegion
+                  - dsql:AddPeerCluster
+                  - dsql:RemovePeerCluster
+                  - dsql:GetVpcEndpointServiceName
+                  - dsql:StartBackupJob
+                  - dsql:GetBackupJob
+                  - dsql:StopBackupJob
+                  - dsql:StartRestoreJob
+                  - dsql:GetRestoreJob
+                  - dsql:StopRestoreJob
+                  - dsql:InjectError
+                Resource: '*'
+              - Sid: DsqlConsolePermissions
+                Effect: Allow
+                Action:
+                  - tag:GetTagKeys
+                  - tag:GetTagValues
+                  - cloudwatch:GetMetricData
+                  - ec2:DescribeVpcEndpoints
+                  - kms:ListAliases
+                  - kms:DescribeKey
+                Resource: '*'
+              - Sid: KMSCryptographicPermissions
+                Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:Encrypt
+                  - kms:GenerateDataKey
+                  - kms:ReEncryptTo
+                  - kms:ReEncryptFrom
+                Resource: '*'
+                Condition:
+                  StringLike:
+                    kms:ViaService:
+                      - dsql.*.amazonaws.com
+                  ForAnyValue:StringEquals:
+                    kms:EncryptionContextKeys: aws:dsql:ClusterId
+              - Sid: CreateDsqlServiceLinkedRole
+                Effect: Allow
+                Action:
+                  - iam:CreateServiceLinkedRole
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    iam:AWSServiceName: dsql.amazonaws.com
+
+  # Lambda Functions
+  SplityCreatePartyFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'SplityCreateParty-${Environment}'
+      Runtime: dotnet8
+      Handler: Splity.Party.Create::Splity.Party.Create.Function::FunctionHandler
+      Role: !GetAtt SplityPartyLambdaRole.Arn
+      Code:
+        ZipFile: |
+          // Placeholder code - deploy actual code separately
+          namespace Splity.Party.Create { public class Function { public string FunctionHandler(object input) => "Placeholder"; } }
+      MemorySize: 512
+      Timeout: 30
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          CLUSTER_DATABASE: !Ref ClusterDatabase
+          CLUSTER_HOSTNAME: !Ref ClusterHostname
+          CLUSTER_USERNAME: !Ref ClusterUsername
+          AWS_BUCKET_NAME: !Ref S3BucketName
+          AWS_BUCKET_REGION: !Ref S3BucketRegion
+          ALLOWED_ORIGINS: !Ref AllowedOrigins
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: Splity
+        - Key: Entity
+          Value: Party
+
+  SplityGetPartyFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'SplityGetParty-${Environment}'
+      Runtime: dotnet8
+      Handler: Splity.Party.Get::Splity.Party.Get.Function::FunctionHandler
+      Role: !GetAtt SplityPartyLambdaRole.Arn
+      Code:
+        ZipFile: |
+          // Placeholder code - deploy actual code separately
+          namespace Splity.Party.Get { public class Function { public string FunctionHandler(object input) => "Placeholder"; } }
+      MemorySize: 512
+      Timeout: 30
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          CLUSTER_DATABASE: !Ref ClusterDatabase
+          CLUSTER_HOSTNAME: !Ref ClusterHostname
+          CLUSTER_USERNAME: !Ref ClusterUsername
+          AWS_BUCKET_NAME: !Ref S3BucketName
+          AWS_BUCKET_REGION: !Ref S3BucketRegion
+          ALLOWED_ORIGINS: !Ref AllowedOrigins
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: Splity
+        - Key: Entity
+          Value: Party
+
+  SplityUpdatePartyFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'SplityUpdateParty-${Environment}'
+      Runtime: dotnet8
+      Handler: Splity.Party.Update::Splity.Party.Update.Function::FunctionHandler
+      Role: !GetAtt SplityPartyLambdaRole.Arn
+      Code:
+        ZipFile: |
+          // Placeholder code - deploy actual code separately
+          namespace Splity.Party.Update { public class Function { public string FunctionHandler(object input) => "Placeholder"; } }
+      MemorySize: 512
+      Timeout: 30
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          CLUSTER_DATABASE: !Ref ClusterDatabase
+          CLUSTER_HOSTNAME: !Ref ClusterHostname
+          CLUSTER_USERNAME: !Ref ClusterUsername
+          AWS_BUCKET_NAME: !Ref S3BucketName
+          AWS_BUCKET_REGION: !Ref S3BucketRegion
+          ALLOWED_ORIGINS: !Ref AllowedOrigins
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: Splity
+        - Key: Entity
+          Value: Party
+
+  SplityDeletePartyFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'SplityDeleteParty-${Environment}'
+      Runtime: dotnet8
+      Handler: Splity.Party.Delete::Splity.Party.Delete.Function::FunctionHandler
+      Role: !GetAtt SplityPartyLambdaRole.Arn
+      Code:
+        ZipFile: |
+          // Placeholder code - deploy actual code separately
+          namespace Splity.Party.Delete { public class Function { public string FunctionHandler(object input) => "Placeholder"; } }
+      MemorySize: 512
+      Timeout: 30
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          CLUSTER_DATABASE: !Ref ClusterDatabase
+          CLUSTER_HOSTNAME: !Ref ClusterHostname
+          CLUSTER_USERNAME: !Ref ClusterUsername
+          AWS_BUCKET_NAME: !Ref S3BucketName
+          AWS_BUCKET_REGION: !Ref S3BucketRegion
+          ALLOWED_ORIGINS: !Ref AllowedOrigins
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: Splity
+        - Key: Entity
+          Value: Party
+
+  # API Gateway HTTP API
+  SplityPartyApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub 'SplityPartyApi-${Environment}'
+      ProtocolType: HTTP
+      Description: 'API Gateway for Splity Party operations'
+      CorsConfiguration:
+        AllowCredentials: false
+        AllowHeaders:
+          - content-type
+          - x-amz-date
+          - authorization
+          - x-api-key
+          - x-amz-security-token
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        AllowOrigins:
+          - !Ref AllowedOrigins
+        MaxAge: 86400
+      Tags:
+        Environment: !Ref Environment
+        Service: Splity
+        Entity: Party
+
+  # API Gateway Stage
+  SplityPartyApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref SplityPartyApi
+      StageName: !Ref Environment
+      AutoDeploy: true
+      Description: !Sub 'Stage for ${Environment} environment'
+      Tags:
+        Environment: !Ref Environment
+        Service: Splity
+        Entity: Party
+
+  # Lambda Permissions for API Gateway
+  CreatePartyLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SplityCreatePartyFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub '${SplityPartyApi}/*/*'
+
+  GetPartyLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SplityGetPartyFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub '${SplityPartyApi}/*/*'
+
+  UpdatePartyLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SplityUpdatePartyFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub '${SplityPartyApi}/*/*'
+
+  DeletePartyLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SplityDeletePartyFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub '${SplityPartyApi}/*/*'
+
+  # API Gateway Integrations
+  CreatePartyIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref SplityPartyApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SplityCreatePartyFunction.Arn}/invocations'
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 30000
+      Description: 'Create party integration'
+
+  GetPartyIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref SplityPartyApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SplityGetPartyFunction.Arn}/invocations'
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 30000
+      Description: 'Get party integration'
+
+  UpdatePartyIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref SplityPartyApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SplityUpdatePartyFunction.Arn}/invocations'
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 30000
+      Description: 'Update party integration'
+
+  DeletePartyIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref SplityPartyApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SplityDeletePartyFunction.Arn}/invocations'
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 30000
+      Description: 'Delete party integration'
+
+  # API Gateway Routes
+  CreatePartyRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SplityPartyApi
+      RouteKey: 'POST /party'
+      Target: !Sub 'integrations/${CreatePartyIntegration}'
+
+  GetPartyRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SplityPartyApi
+      RouteKey: 'GET /party/{id}'
+      Target: !Sub 'integrations/${GetPartyIntegration}'
+
+  UpdatePartyRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SplityPartyApi
+      RouteKey: 'PUT /party/{id}'
+      Target: !Sub 'integrations/${UpdatePartyIntegration}'
+
+  DeletePartyRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SplityPartyApi
+      RouteKey: 'DELETE /party/{id}'
+      Target: !Sub 'integrations/${DeletePartyIntegration}'
+
+Outputs:
+  # API Gateway Outputs
+  ApiGatewayUrl:
+    Description: 'API Gateway endpoint URL for Party operations'
+    Value: !Sub 'https://${SplityPartyApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiUrl'
+
+  ApiGatewayId:
+    Description: 'API Gateway ID'
+    Value: !Ref SplityPartyApi
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiId'
+
+  # Lambda Function Outputs
+  CreatePartyFunctionArn:
+    Description: 'Create Party Lambda Function ARN'
+    Value: !GetAtt SplityCreatePartyFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-CreatePartyFunctionArn'
+
+  GetPartyFunctionArn:
+    Description: 'Get Party Lambda Function ARN'
+    Value: !GetAtt SplityGetPartyFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-GetPartyFunctionArn'
+
+  UpdatePartyFunctionArn:
+    Description: 'Update Party Lambda Function ARN'
+    Value: !GetAtt SplityUpdatePartyFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-UpdatePartyFunctionArn'
+
+  DeletePartyFunctionArn:
+    Description: 'Delete Party Lambda Function ARN'
+    Value: !GetAtt SplityDeletePartyFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-DeletePartyFunctionArn'
+
+  # IAM Role Output
+  LambdaRoleArn:
+    Description: 'Lambda execution role ARN'
+    Value: !GetAtt SplityPartyLambdaRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-LambdaRoleArn'
