@@ -88,6 +88,63 @@ public class UserRepository(IDbConnection connection) : IUserRepository
         };
     }
 
+    public async Task<User?> UpdateUserAsync(UpdateUserRequest request)
+    {
+        // First check if the user exists
+        var existingUser = await GetUserByIdAsync(request.UserId);
+        if (existingUser == null)
+        {
+            return null;
+        }
+        
+        // If email is being updated, check it doesn't already exist for another user
+        if (!string.IsNullOrWhiteSpace(request.Email) && request.Email != existingUser.Email)
+        {
+            var userWithEmail = await GetUserByEmailAsync(request.Email);
+            if (userWithEmail != null && userWithEmail.UserId != request.UserId)
+            {
+                throw new InvalidOperationException($"User with email '{request.Email}' already exists.");
+            }
+        }
+
+        // Build dynamic SQL based on what fields are being updated
+        var setClauses = new List<string>();
+        var parameters = new List<(string name, object value)>();
+        
+        if (!string.IsNullOrWhiteSpace(request.Name))
+        {
+            setClauses.Add("Name = @name");
+            parameters.Add(("@name", request.Name));
+        }
+        
+        if (!string.IsNullOrWhiteSpace(request.Email))
+        {
+            setClauses.Add("Email = @email");
+            parameters.Add(("@email", request.Email));
+        }
+        
+        if (setClauses.Count == 0)
+        {
+            // Nothing to update, return existing user
+            return existingUser;
+        }
+        
+        var sql = $"UPDATE Users SET {string.Join(", ", setClauses)} WHERE UserId = @userId";
+        
+        await using var command = new NpgsqlCommand(sql, (NpgsqlConnection)connection);
+        command.Parameters.AddWithValue("@userId", request.UserId);
+        
+        foreach (var (name, value) in parameters)
+        {
+            command.Parameters.AddWithValue(name, value);
+        }
+        
+        await command.ExecuteNonQueryAsync();
+        
+        // Return the updated user
+        return await GetUserByIdAsync(request.UserId);
+    }
+
     public async Task<bool> DeleteUserAsync(Guid userId)
     {
         const string sql = "DELETE FROM Users WHERE UserId = @userId";

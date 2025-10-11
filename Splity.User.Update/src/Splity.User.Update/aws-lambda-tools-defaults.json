@@ -1,0 +1,22 @@
+{
+  "Information": [
+    "All the command line options for the Lambda command can be specified in this file."
+  ],
+  "profile": "",
+  "region": "eu-west-2",
+  "configuration": "Release",
+  "function-architecture": "x86_64",
+  "function-runtime": "dotnet8",
+  "function-memory-size": 128,
+  "function-timeout": 15,
+  "function-handler": "Splity.User.Update::Splity.User.Update.Function::FunctionHandler",
+  "function-name": "SplityUpdateUser",
+  "environment-variables": {
+    "CLUSTER_HOSTNAME": "",
+    "CLUSTER_USERNAME": "admin",
+    "CLUSTER_DATABASE": "postgres",
+    "AWS_BUCKET_NAME": "split-app-v1",
+    "AWS_BUCKET_REGION": "eu-central-1",
+    "ALLOWED_ORIGINS": "*"
+  }
+}
