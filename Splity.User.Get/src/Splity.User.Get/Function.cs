@@ -28,31 +28,27 @@ public class Function(IDbConnection connection, IUserRepository? userRepository 
     public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request,
         ILambdaContext context)
     {
+        var httpMethod = HttpMethod.Get.ToString();
+
         // Validate HTTP method
-        var methodValidation = ValidateHttpMethod(request, HttpMethod.Get.ToString());
+        var methodValidation = ValidateHttpMethod(request, httpMethod);
         if (methodValidation != null)
         {
             return methodValidation;
         }
 
-        if (request.QueryStringParameters == null ||
-            !request.QueryStringParameters.TryGetValue("userId", out var userId))
+        if (request.PathParameters?.TryGetValue("id", out var userIdString) != true || !Guid.TryParse(userIdString, out var userId))
         {
-            return CreateErrorResponse(HttpStatusCode.BadRequest, "Missing userId query parameter", HttpMethod.Get.ToString());
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Valid user ID is required in path", httpMethod);
         }
 
-        if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var guidUserId))
-        {
-            return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid or missing userId parameter", HttpMethod.Get.ToString());
-        }
-
-        var user = await _userRepository.GetUserByIdWithDetailsAsync(guidUserId);
+        var user = await _userRepository.GetUserByIdWithDetailsAsync(userId);
 
         if (user == null)
         {
-            return CreateErrorResponse(HttpStatusCode.NotFound, "User not found", HttpMethod.Get.ToString());
+            return CreateErrorResponse(HttpStatusCode.NotFound, "User not found", httpMethod);
         }
 
-        return CreateSuccessResponse(HttpStatusCode.OK, new { user }, HttpMethod.Get.ToString());
+        return CreateSuccessResponse(HttpStatusCode.OK, new { user }, httpMethod);
     }
 }

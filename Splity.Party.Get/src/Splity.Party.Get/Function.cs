@@ -31,26 +31,23 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
     public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request,
         ILambdaContext context)
     {
+        var httpMethod = HttpMethod.Get.ToString();
+
         // Validate HTTP method
-        var methodValidation = ValidateHttpMethod(request, "GET");
+        var methodValidation = ValidateHttpMethod(request, httpMethod);
         if (methodValidation != null)
         {
             return methodValidation;
         }
 
-        if (request.QueryStringParameters == null ||
-            !request.QueryStringParameters.TryGetValue("partyId", out var partyId))
+        // Extract user ID from path parameters
+        if (request.PathParameters?.TryGetValue("id", out var partyIdString) != true || !Guid.TryParse(partyIdString, out var partyId))
         {
-            return CreateErrorResponse(HttpStatusCode.BadRequest, "Missing partyId query parameter", "GET");
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Valid party ID is required in path", httpMethod);
         }
 
-        if (string.IsNullOrEmpty(partyId) || !Guid.TryParse(partyId, out var guidPartyId))
-        {
-            return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid or missing partyId parameter", "GET");
-        }
+        var party = await _partyRepository.GetPartyById(partyId);
 
-        var party = await _partyRepository.GetPartyById(guidPartyId);
-
-        return CreateSuccessResponse(HttpStatusCode.OK, new { party }, "GET");
+        return CreateSuccessResponse(HttpStatusCode.OK, new { party }, httpMethod);
     }
 }

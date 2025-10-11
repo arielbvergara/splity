@@ -31,8 +31,10 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
     /// <returns></returns>
     public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
     {
+        var httpMethod = HttpMethod.Put.ToString();
+
         // Validate HTTP method
-        var methodValidation = ValidateHttpMethod(request, "PUT");
+        var methodValidation = ValidateHttpMethod(request, httpMethod);
         if (methodValidation != null)
         {
             return methodValidation;
@@ -40,14 +42,13 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
 
         if (string.IsNullOrEmpty(request.Body))
         {
-            return CreateErrorResponse(HttpStatusCode.BadRequest, "Request body is required", "PUT");
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Request body is required", httpMethod);
         }
 
         // Extract party ID from path parameters
-        if (request.PathParameters?.TryGetValue("id", out var partyIdString) != true ||
-            !Guid.TryParse(partyIdString, out var partyId))
+        if (request.PathParameters?.TryGetValue("id", out var partyIdString) != true || !Guid.TryParse(partyIdString, out var partyId))
         {
-            return CreateErrorResponse(HttpStatusCode.BadRequest, "Valid party ID is required in path", "PUT");
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Valid party ID is required in path", httpMethod);
         }
 
         try
@@ -57,13 +58,13 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
 
             if (updatePartyRequest == null)
             {
-                return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid request format", "PUT");
+                return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid request format", httpMethod);
             }
 
             // Validate that at least one field is provided for update
             if (string.IsNullOrWhiteSpace(updatePartyRequest.Name))
             {
-                return CreateErrorResponse(HttpStatusCode.BadRequest, "At least one field (Name) must be provided for update", "PUT");
+                return CreateErrorResponse(HttpStatusCode.BadRequest, "At least one field (Name) must be provided for update", httpMethod);
             }
 
             // Set the party ID from the path parameter
@@ -73,19 +74,19 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
 
             if (updatedParty == null)
             {
-                return CreateErrorResponse(HttpStatusCode.NotFound, "Party not found", "PUT");
+                return CreateErrorResponse(HttpStatusCode.NotFound, "Party not found", httpMethod);
             }
 
-            return CreateSuccessResponse(HttpStatusCode.OK, updatedParty, "PUT");
+            return CreateSuccessResponse(HttpStatusCode.OK, updatedParty, httpMethod);
         }
         catch (JsonException)
         {
-            return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid JSON format", "PUT");
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid JSON format", httpMethod);
         }
         catch (Exception ex)
         {
             context.Logger.LogError($"Error updating party: {ex.Message}");
-            return CreateErrorResponse(HttpStatusCode.InternalServerError, "Internal server error", "PUT");
+            return CreateErrorResponse(HttpStatusCode.InternalServerError, "Internal server error", httpMethod);
         }
     }
 }
