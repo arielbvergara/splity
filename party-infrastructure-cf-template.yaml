@@ -118,22 +118,32 @@ Resources:
                   StringEquals:
                     iam:AWSServiceName: dsql.amazonaws.com
 
-  # Lambda Functions
+  # Lambda Functions (using Node.js placeholders initially)
   SplityCreatePartyFunction:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Sub 'SplityCreateParty-${Environment}'
-      Runtime: dotnet8
-      Handler: Splity.Party.Create::Splity.Party.Create.Function::FunctionHandler
+      Runtime: nodejs20.x
+      Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
-          // Placeholder code - deploy actual code separately
-          namespace Splity.Party.Create { public class Function { public string FunctionHandler(object input) => "Placeholder"; } }
+          exports.handler = async function(event) {
+            return {
+              statusCode: 200,
+              headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+              },
+              body: JSON.stringify({
+                message: 'Placeholder CreateParty function - deploy .NET code using: dotnet lambda deploy-function --function-name SplityCreateParty-dev'
+              })
+            };
+          };
       MemorySize: 512
       Timeout: 30
-      Architectures:
-        - x86_64
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
@@ -154,17 +164,27 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Sub 'SplityGetParty-${Environment}'
-      Runtime: dotnet8
-      Handler: Splity.Party.Get::Splity.Party.Get.Function::FunctionHandler
+      Runtime: nodejs20.x
+      Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
-          // Placeholder code - deploy actual code separately
-          namespace Splity.Party.Get { public class Function { public string FunctionHandler(object input) => "Placeholder"; } }
+          exports.handler = async function(event) {
+            return {
+              statusCode: 200,
+              headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+              },
+              body: JSON.stringify({
+                message: 'Placeholder GetParty function - deploy .NET code using: dotnet lambda deploy-function --function-name SplityGetParty-dev'
+              })
+            };
+          };
       MemorySize: 512
       Timeout: 30
-      Architectures:
-        - x86_64
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
@@ -185,17 +205,27 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Sub 'SplityUpdateParty-${Environment}'
-      Runtime: dotnet8
-      Handler: Splity.Party.Update::Splity.Party.Update.Function::FunctionHandler
+      Runtime: nodejs20.x
+      Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
-          // Placeholder code - deploy actual code separately
-          namespace Splity.Party.Update { public class Function { public string FunctionHandler(object input) => "Placeholder"; } }
+          exports.handler = async function(event) {
+            return {
+              statusCode: 200,
+              headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'PUT, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+              },
+              body: JSON.stringify({
+                message: 'Placeholder UpdateParty function - deploy .NET code using: dotnet lambda deploy-function --function-name SplityUpdateParty-dev'
+              })
+            };
+          };
       MemorySize: 512
       Timeout: 30
-      Architectures:
-        - x86_64
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
@@ -216,17 +246,27 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Sub 'SplityDeleteParty-${Environment}'
-      Runtime: dotnet8
-      Handler: Splity.Party.Delete::Splity.Party.Delete.Function::FunctionHandler
+      Runtime: nodejs20.x
+      Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
-          // Placeholder code - deploy actual code separately
-          namespace Splity.Party.Delete { public class Function { public string FunctionHandler(object input) => "Placeholder"; } }
+          exports.handler = async function(event) {
+            return {
+              statusCode: 200,
+              headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+              },
+              body: JSON.stringify({
+                message: 'Placeholder DeleteParty function - deploy .NET code using: dotnet lambda deploy-function --function-name SplityDeleteParty-dev'
+              })
+            };
+          };
       MemorySize: 512
       Timeout: 30
-      Architectures:
-        - x86_64
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
@@ -285,14 +325,14 @@ Resources:
         Service: Splity
         Entity: Party
 
-  # Lambda Permissions for API Gateway
+  # Lambda Permissions for API Gateway (Simplified)
   CreatePartyLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref SplityCreatePartyFunction
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub '${SplityPartyApi}/*/*'
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SplityPartyApi}/*/*'
 
   GetPartyLambdaPermission:
     Type: AWS::Lambda::Permission
@@ -300,7 +340,7 @@ Resources:
       FunctionName: !Ref SplityGetPartyFunction
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub '${SplityPartyApi}/*/*'
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SplityPartyApi}/*/*'
 
   UpdatePartyLambdaPermission:
     Type: AWS::Lambda::Permission
@@ -308,7 +348,7 @@ Resources:
       FunctionName: !Ref SplityUpdatePartyFunction
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub '${SplityPartyApi}/*/*'
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SplityPartyApi}/*/*'
 
   DeletePartyLambdaPermission:
     Type: AWS::Lambda::Permission
@@ -316,11 +356,12 @@ Resources:
       FunctionName: !Ref SplityDeletePartyFunction
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub '${SplityPartyApi}/*/*'
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SplityPartyApi}/*/*'
 
   # API Gateway Integrations
   CreatePartyIntegration:
     Type: AWS::ApiGatewayV2::Integration
+    DependsOn: CreatePartyLambdaPermission
     Properties:
       ApiId: !Ref SplityPartyApi
       IntegrationType: AWS_PROXY
@@ -331,6 +372,7 @@ Resources:
 
   GetPartyIntegration:
     Type: AWS::ApiGatewayV2::Integration
+    DependsOn: GetPartyLambdaPermission
     Properties:
       ApiId: !Ref SplityPartyApi
       IntegrationType: AWS_PROXY
@@ -341,6 +383,7 @@ Resources:
 
   UpdatePartyIntegration:
     Type: AWS::ApiGatewayV2::Integration
+    DependsOn: UpdatePartyLambdaPermission
     Properties:
       ApiId: !Ref SplityPartyApi
       IntegrationType: AWS_PROXY
@@ -351,6 +394,7 @@ Resources:
 
   DeletePartyIntegration:
     Type: AWS::ApiGatewayV2::Integration
+    DependsOn: DeletePartyLambdaPermission
     Properties:
       ApiId: !Ref SplityPartyApi
       IntegrationType: AWS_PROXY
@@ -433,3 +477,20 @@ Outputs:
     Value: !GetAtt SplityPartyLambdaRole.Arn
     Export:
       Name: !Sub '${AWS::StackName}-LambdaRoleArn'
+
+  # API Endpoints for Testing
+  CreatePartyEndpoint:
+    Description: 'POST endpoint to create a party'
+    Value: !Sub 'https://${SplityPartyApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/party'
+
+  GetPartyEndpoint:
+    Description: 'GET endpoint to retrieve a party'
+    Value: !Sub 'https://${SplityPartyApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/party/{id}'
+
+  UpdatePartyEndpoint:
+    Description: 'PUT endpoint to update a party'
+    Value: !Sub 'https://${SplityPartyApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/party/{id}'
+
+  DeletePartyEndpoint:
+    Description: 'DELETE endpoint to delete a party'
+    Value: !Sub 'https://${SplityPartyApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/party/{id}'
