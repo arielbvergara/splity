@@ -288,70 +288,76 @@ Describe the changes (if the title is not enough) in an imperative way (i.e.: Ca
 
 ### CloudFormation Templates
 
-#### Party Infrastructure Template
-The Party entity infrastructure is defined in `party-infrastructure-cf-template.yaml`.
+#### Complete Infrastructure Template
+The entire Splity application infrastructure is defined in `splity-infrastructure-cf-template.yaml`.
 
-**Deploy Party Infrastructure:**
+**Deploy Complete Infrastructure:**
 ```bash
-# Deploy Party infrastructure stack
+# Deploy complete Splity infrastructure stack
 aws cloudformation deploy \
-  --template-file party-infrastructure-cf-template.yaml \
-  --stack-name splity-party-infrastructure-dev \
+  --template-file splity-infrastructure-cf-template.yaml \
+  --stack-name splity-complete-infrastructure-dev \
   --parameter-overrides Environment=dev \
   --capabilities CAPABILITY_NAMED_IAM \
   --region eu-west-2
 
-# Update stack parameters
+# Deploy with custom parameters
 aws cloudformation deploy \
-  --template-file party-infrastructure-cf-template.yaml \
-  --stack-name splity-party-infrastructure-dev \
+  --template-file splity-infrastructure-cf-template.yaml \
+  --stack-name splity-complete-infrastructure-dev \
   --parameter-overrides \
     Environment=dev \
     ClusterHostname=your-cluster-hostname \
     S3BucketName=split-app-v1 \
+    DocumentIntelligenceApiKey=your-api-key \
   --capabilities CAPABILITY_NAMED_IAM \
   --region eu-west-2
 ```
 
-**Deploy Lambda Code After Infrastructure:**
-After deploying the infrastructure, update the Lambda functions with actual code:
+**Deploy All Lambda Code After Infrastructure:**
+After deploying the infrastructure, update all Lambda functions with actual .NET code:
 ```bash
-# Deploy each Party Lambda function
-cd Splity.Party.Create/src/Splity.Party.Create
-dotnet lambda deploy-function --function-name SplityCreateParty-dev
+# Party Functions
+cd Splity.Party.Create/src/Splity.Party.Create && dotnet lambda deploy-function --function-name SplityCreateParty-dev --region eu-west-2
+cd ../../../Splity.Party.Get/src/Splity.Party.Get && dotnet lambda deploy-function --function-name SplityGetParty-dev --region eu-west-2
+cd ../../../Splity.Party.Update/src/Splity.Party.Update && dotnet lambda deploy-function --function-name SplityUpdateParty-dev --region eu-west-2
+cd ../../../Splity.Party.Delete/src/Splity.Party.Delete && dotnet lambda deploy-function --function-name SplityDeleteParty-dev --region eu-west-2
 
-cd ../../../Splity.Party.Get/src/Splity.Party.Get
-dotnet lambda deploy-function --function-name SplityGetParty-dev
+# Expense Functions
+cd ../../../Splity.Expenses.Create/src/Splity.Expenses.Create && dotnet lambda deploy-function --function-name SplityCreateExpenses-dev --region eu-west-2
+cd ../../../Splity.Expenses.Delete/src/Splity.Expenses.Delete && dotnet lambda deploy-function --function-name SplityDeleteExpenses-dev --region eu-west-2
+cd ../../../Splity.Expenses.Extract/src/Splity.Expenses.Extract && dotnet lambda deploy-function --function-name SplityExtractExpenses-dev --region eu-west-2
 
-cd ../../../Splity.Party.Update/src/Splity.Party.Update
-dotnet lambda deploy-function --function-name SplityUpdateParty-dev
-
-cd ../../../Splity.Party.Delete/src/Splity.Party.Delete
-dotnet lambda deploy-function --function-name SplityDeleteParty-dev
+# User Functions
+cd ../../../Splity.User.Create/src/Splity.User.Create && dotnet lambda deploy-function --function-name SplityCreateUser-dev --region eu-west-2
+cd ../../../Splity.User.Get/src/Splity.User.Get && dotnet lambda deploy-function --function-name SplityGetUser-dev --region eu-west-2
+cd ../../../Splity.User.Update/src/Splity.User.Update && dotnet lambda deploy-function --function-name SplityUpdateUser-dev --region eu-west-2
 ```
 
 **Stack Outputs:**
-The template provides these outputs:
-- `ApiGatewayUrl`: API endpoint for Party operations
+The template provides comprehensive outputs:
+- `ApiGatewayUrl`: Main API endpoint for all operations
 - `ApiGatewayId`: API Gateway ID for reference
-- Function ARNs for all Party Lambda functions
+- Function ARNs for all 10 Lambda functions
 - IAM Role ARN for Lambda execution
+- Individual API endpoints for each operation
 
 #### Template Features
 - **Environment-specific deployments** (dev, staging, prod)
-- **Complete CRUD operations** for Party entity
+- **Complete CRUD operations** for all entities (Party, Expenses, Users)
 - **API Gateway HTTP API** with CORS support
-- **RESTful routes**:
-  - `POST /party` - Create party
-  - `GET /party/{id}` - Get party by ID
-  - `PUT /party/{id}` - Update party by ID
-  - `DELETE /party/{id}` - Delete party by ID
-- **IAM roles and permissions** for DSQL and KMS
-- **Environment variables** configuration
-- **Resource tagging** for organization
+- **Comprehensive RESTful routes**:
+  - **Party**: `POST /party`, `GET/PUT/DELETE /party/{id}`
+  - **Expenses**: `POST/DELETE /expenses`, `PUT /party/{partyId}/extract`
+  - **Users**: `POST /users`, `GET/PUT /users/{id}`
+- **IAM roles and permissions** for DSQL, KMS, and S3
+- **Environment variables** configured for all functions
+- **Resource tagging** for organization and cost tracking
+- **Azure Document Intelligence** integration for receipt processing
+- **10 Lambda functions** with placeholder Node.js code
 
-#### Future Infrastructure Templates
-Plan to create similar templates for:
-- `expenses-infrastructure-cf-template.yaml` - Expense entity operations
-- `users-infrastructure-cf-template.yaml` - User entity operations
-- `master-infrastructure-cf-template.yaml` - Orchestrates all entity templates
+#### Legacy Templates (For Reference)
+- `api-gateway-cf-template.yaml` - Original API Gateway template
+- Individual Lambda function templates - Original single-function templates
+
+The complete template supersedes all individual templates and provides the recommended deployment approach.

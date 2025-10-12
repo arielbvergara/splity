@@ -26,10 +26,10 @@ The application leverages Azure's Document Intelligence for receipt analysis and
 │   ├── Common/                           # Common utilities and helpers
 │   ├── Database/                         # Database models and repositories
 │   └── Storage/                          # S3 storage services
-├── party-infrastructure-cf-template.yaml # CloudFormation template for Party entity
-├── api-gateway-cf-template.yaml          # API Gateway CloudFormation template
-├── create-party-lambda-function-cf-template.yaml # Individual Lambda templates
-└── delete-party-lambda-function-cf-template.yaml # Individual Lambda templates
+├── splity-infrastructure-cf-template.yaml # Complete CloudFormation template for all entities
+├── api-gateway-cf-template.yaml          # Legacy API Gateway template (reference)
+├── create-party-lambda-function-cf-template.yaml # Legacy individual Lambda templates (reference)
+└── delete-party-lambda-function-cf-template.yaml # Legacy individual Lambda templates (reference)
 ```
 
 ## Usage Instructions
@@ -69,43 +69,58 @@ dotnet build
 
 ### Infrastructure Deployment
 
-#### Deploy Party Infrastructure
-The application uses CloudFormation templates for infrastructure as code. Deploy the Party entity infrastructure:
+#### Deploy Complete Infrastructure
+The application uses a comprehensive CloudFormation template for infrastructure as code. Deploy the entire Splity infrastructure:
 
 ```bash
-# Deploy Party infrastructure stack
+# Deploy complete Splity infrastructure stack
 aws cloudformation deploy \
-  --template-file party-infrastructure-cf-template.yaml \
-  --stack-name splity-party-infrastructure-dev \
+  --template-file splity-infrastructure-cf-template.yaml \
+  --stack-name splity-complete-infrastructure-dev \
   --parameter-overrides Environment=dev \
   --capabilities CAPABILITY_NAMED_IAM \
   --region eu-west-2
 ```
 
-#### Deploy Lambda Code
-After infrastructure is deployed, update Lambda functions with actual code:
+#### Deploy All Lambda Code
+After infrastructure is deployed, update all Lambda functions with actual .NET code:
 
 ```bash
-# Deploy each Party Lambda function
-cd Splity.Party.Create/src/Splity.Party.Create
-dotnet lambda deploy-function --function-name SplityCreateParty-dev
+# Party Functions
+cd Splity.Party.Create/src/Splity.Party.Create && dotnet lambda deploy-function --function-name SplityCreateParty-dev --region eu-west-2
+cd ../../../Splity.Party.Get/src/Splity.Party.Get && dotnet lambda deploy-function --function-name SplityGetParty-dev --region eu-west-2
+cd ../../../Splity.Party.Update/src/Splity.Party.Update && dotnet lambda deploy-function --function-name SplityUpdateParty-dev --region eu-west-2
+cd ../../../Splity.Party.Delete/src/Splity.Party.Delete && dotnet lambda deploy-function --function-name SplityDeleteParty-dev --region eu-west-2
 
-cd ../../../Splity.Party.Get/src/Splity.Party.Get
-dotnet lambda deploy-function --function-name SplityGetParty-dev
+# Expense Functions
+cd ../../../Splity.Expenses.Create/src/Splity.Expenses.Create && dotnet lambda deploy-function --function-name SplityCreateExpenses-dev --region eu-west-2
+cd ../../../Splity.Expenses.Delete/src/Splity.Expenses.Delete && dotnet lambda deploy-function --function-name SplityDeleteExpenses-dev --region eu-west-2
+cd ../../../Splity.Expenses.Extract/src/Splity.Expenses.Extract && dotnet lambda deploy-function --function-name SplityExtractExpenses-dev --region eu-west-2
 
-cd ../../../Splity.Party.Update/src/Splity.Party.Update
-dotnet lambda deploy-function --function-name SplityUpdateParty-dev
-
-cd ../../../Splity.Party.Delete/src/Splity.Party.Delete
-dotnet lambda deploy-function --function-name SplityDeleteParty-dev
+# User Functions
+cd ../../../Splity.User.Create/src/Splity.User.Create && dotnet lambda deploy-function --function-name SplityCreateUser-dev --region eu-west-2
+cd ../../../Splity.User.Get/src/Splity.User.Get && dotnet lambda deploy-function --function-name SplityGetUser-dev --region eu-west-2
+cd ../../../Splity.User.Update/src/Splity.User.Update && dotnet lambda deploy-function --function-name SplityUpdateUser-dev --region eu-west-2
 ```
 
-#### API Endpoints
-After deployment, the following RESTful endpoints are available:
+#### Complete API Endpoints
+After deployment, the following comprehensive RESTful API is available:
+
+**Party Operations:**
 - `POST /party` - Create a new party
 - `GET /party/{id}` - Get party by ID
 - `PUT /party/{id}` - Update party by ID
 - `DELETE /party/{id}` - Delete party by ID
+
+**Expense Operations:**
+- `POST /expenses` - Create expenses for a party
+- `DELETE /expenses` - Delete expenses (bulk operation)
+- `PUT /party/{partyId}/extract` - Upload receipt and extract expense data
+
+**User Operations:**
+- `POST /users` - Create a new user
+- `GET /users/{id}` - Get user by ID
+- `PUT /users/{id}` - Update user by ID
 
 ### Quick Start
 1. Create a new party:
@@ -182,26 +197,29 @@ Key component interactions:
 ## Infrastructure
 
 ### CloudFormation Templates
-- `party-infrastructure-cf-template.yaml`: Complete Party entity infrastructure
-- `api-gateway-cf-template.yaml`: API Gateway configuration
-- Individual Lambda function templates for reference
+- `splity-infrastructure-cf-template.yaml`: Complete application infrastructure (recommended)
+- Legacy templates (for reference):
+  - `api-gateway-cf-template.yaml`: API Gateway configuration
+  - Individual Lambda function templates
 
 ### Lambda Functions
 **Party Management:**
 - SplityCreateParty-{env}: Creates new parties
-- SplityGetParty-{env}: Retrieves party information
+- SplityGetParty-{env}: Retrieves party information  
 - SplityUpdateParty-{env}: Updates existing parties
 - SplityDeleteParty-{env}: Deletes parties and related data
 
 **Expense Management:**
-- SplityCreateExpenses: Creates new expenses
-- SplityExtractExpenses: Processes and analyzes receipt images
-- SplityDeleteExpenses: Deletes existing expenses
-- SplityGetExpenses: Retrieves expense information
+- SplityCreateExpenses-{env}: Creates new expenses for parties
+- SplityDeleteExpenses-{env}: Bulk deletes expenses by IDs
+- SplityExtractExpenses-{env}: Processes receipt images via Azure Document Intelligence
 
 **User Management:**
-- SplityCreateUser: Creates new users
-- SplityUpdateUser: Updates user information
+- SplityCreateUser-{env}: Creates new users
+- SplityGetUser-{env}: Retrieves user information with details
+- SplityUpdateUser-{env}: Updates existing user information
+
+**Total: 10 Lambda functions** deployed with comprehensive CRUD operations
 
 ### API Gateway
 - **HTTP API** with CORS support
