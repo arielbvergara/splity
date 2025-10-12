@@ -4,6 +4,8 @@ using System.Text.Json;
 using Amazon;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
+using Splity.Shared.Authentication;
+using Splity.Shared.Authentication.Services.Interfaces;
 using Splity.Shared.Common;
 using Splity.Shared.Database;
 using Splity.Shared.Database.Models.Commands;

@@ -33,8 +33,12 @@ public class AuthenticationService : IAuthenticationService
             return null;
         }
 
-        // Try to find the corresponding Splity user
-        var splityUser = await _userRepository.GetUserByEmailAsync(cognitoUser.Email);
+        // Try to find the corresponding Splity user by Cognito ID first, then by email
+        var splityUser = await _userRepository.GetUserByCognitoIdAsync(cognitoUser.CognitoUserId);
+        if (splityUser == null)
+        {
+            splityUser = await _userRepository.GetUserByEmailAsync(cognitoUser.Email);
+        }
         if (splityUser != null)
         {
             cognitoUser.SplityUserId = splityUser.UserId;
@@ -61,7 +65,8 @@ public class AuthenticationService : IAuthenticationService
         var createUserRequest = new CreateUserRequest
         {
             Email = cognitoUser.Email,
-            Name = !string.IsNullOrEmpty(cognitoUser.Name) ? cognitoUser.Name : cognitoUser.Email
+            Name = !string.IsNullOrEmpty(cognitoUser.Name) ? cognitoUser.Name : cognitoUser.Email,
+            CognitoUserId = cognitoUser.CognitoUserId
         };
 
         var newUser = await _userRepository.CreateUserAsync(createUserRequest);

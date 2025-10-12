@@ -1,12 +1,22 @@
 "use client"
 
 import Link from "next/link"
-import { Moon, Sun } from "lucide-react"
+import { Moon, Sun, User, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useState, useEffect } from "react"
+import { useCognitoAuth } from "@/contexts/cognito-auth-context"
 
 export function Header() {
   const [isDark, setIsDark] = useState(false)
+  const { isAuthenticated, isLoading, user, signIn, signOut } = useCognitoAuth()
 
   useEffect(() => {
     // Check initial theme
@@ -44,18 +54,22 @@ export function Header() {
 
           {/* Navigation */}
           <nav className="flex items-center gap-6">
-            <Link
-              href="/dashboard"
-              className="text-sm font-medium text-foreground transition-colors hover:text-primary"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/dashboard/analytics"
-              className="text-sm font-medium text-foreground transition-colors hover:text-primary"
-            >
-              Analytics
-            </Link>
+            {isAuthenticated && (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="text-sm font-medium text-foreground transition-colors hover:text-primary"
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/dashboard/analytics"
+                  className="text-sm font-medium text-foreground transition-colors hover:text-primary"
+                >
+                  Analytics
+                </Link>
+              </>
+            )}
 
             <button
               onClick={toggleTheme}
@@ -65,7 +79,36 @@ export function Header() {
               {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
 
-            <Button>Sign In</Button>
+            {isLoading ? (
+              <div className="h-9 w-20 animate-pulse rounded bg-muted" />
+            ) : isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <User className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>
+                    {user?.name || user?.email || 'User'}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard">Dashboard</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/analytics">Analytics</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={signOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button onClick={signIn}>Sign In</Button>
+            )}
           </nav>
         </div>
       </div>

@@ -6,7 +6,8 @@ import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { AuthProvider } from "@/contexts/auth-context"
+import { CognitoAuthProvider } from "@/contexts/cognito-auth-context"
+import { AuthInitializer } from "@/components/auth-initializer"
 import { Toaster } from "@/components/ui/toaster"
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
 import { OfflineIndicator } from "@/components/offline-indicator"
@@ -51,12 +52,13 @@ export default function RootLayout({
       </head>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <AuthProvider>
+          <CognitoAuthProvider>
+            <AuthInitializer />
             <Suspense fallback={null}>{children}</Suspense>
             <Toaster />
             <PWAInstallPrompt />
             <OfflineIndicator />
-          </AuthProvider>
+          </CognitoAuthProvider>
         </ThemeProvider>
         <Analytics />
       </body>

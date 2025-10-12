@@ -1,11 +1,11 @@
 // User management service
 
-import { apiClient } from "@/lib/api-client"
+import { authenticatedApiClient } from "@/lib/authenticated-api-client"
 import type { User, UserWithDetails, UpdateUserInput, CreateUserInput, BackendApiResponse } from "@/types"
 
 export const userService = {
   async createUser(data: CreateUserInput): Promise<User> {
-    const response = await apiClient.post<BackendApiResponse<User>>("/users", data)
+    const response = await authenticatedApiClient.post<BackendApiResponse<User>>("/users", data)
     if (!response.success) {
       throw new Error(response.errorMessage || "Failed to create user")
     }
@@ -13,7 +13,7 @@ export const userService = {
   },
 
   async getUser(id: string): Promise<UserWithDetails> {
-    const response = await apiClient.get<BackendApiResponse<UserWithDetails>>(`/users/${id}`)
+    const response = await authenticatedApiClient.get<BackendApiResponse<UserWithDetails>>(`/users/${id}`)
     if (!response.success) {
       throw new Error(response.errorMessage || "Failed to get user")
     }
@@ -21,7 +21,7 @@ export const userService = {
   },
 
   async updateUser(id: string, updates: UpdateUserInput): Promise<User> {
-    const response = await apiClient.put<BackendApiResponse<User>>(`/users/${id}`, updates)
+    const response = await authenticatedApiClient.put<BackendApiResponse<User>>(`/users/${id}`, updates)
     if (!response.success) {
       throw new Error(response.errorMessage || "Failed to update user")
     }

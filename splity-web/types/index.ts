@@ -6,6 +6,7 @@ export interface User {
   name: string
   email: string
   avatar?: string
+  cognitoUserId?: string
   createdAt: string
 }
 
@@ -158,6 +159,7 @@ export interface CreatePartyInput {
 export interface CreateUserInput {
   name: string
   email: string
+  cognitoUserId?: string
 }
 
 export interface CreateExpenseInput {
