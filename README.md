@@ -194,6 +194,60 @@ Key component interactions:
 6. S3 maintains persistent storage of receipt images
 7. API Gateway provides RESTful interface for all operations
 
+## TODO: Missing Backend Features
+
+The following features are missing from the current backend implementation and need to be added:
+
+### Party Management
+- [ ] `GET /parties` - List all parties for a user
+- [ ] `POST /party/{partyId}/invite` - Invite members to party
+- [ ] `DELETE /party/{partyId}/members/{userId}` - Remove member from party
+- [ ] `GET /party/{partyId}/members` - List party members
+- [ ] Party join functionality via invite codes
+
+### Expense Management
+- [ ] `GET /party/{partyId}/expenses` - Get expenses for a party
+- [ ] `PUT /expenses/{expenseId}` - Update individual expense
+- [ ] `GET /expenses/{expenseId}` - Get individual expense details
+- [ ] Expense splitting algorithms (equal, percentage, custom amounts)
+- [ ] Expense categories and tagging
+
+### Settlement & Payments
+- [ ] `GET /party/{partyId}/settlements` - Calculate who owes whom
+- [ ] `POST /party/{partyId}/settle` - Mark settlements as paid
+- [ ] Payment tracking and history
+- [ ] Settlement optimization algorithms
+
+### User & Authentication
+- [ ] User authentication and session management
+- [ ] `GET /users/{userId}/parties` - Get user's parties
+- [ ] `GET /users/{userId}/expenses` - Get user's expenses
+- [ ] User profile management
+
+### File & Receipt Management
+- [ ] Receipt image storage and retrieval
+- [ ] Receipt data validation and editing
+- [ ] Multiple receipt formats support
+- [ ] Receipt OCR confidence scoring
+
+### Analytics & Reporting
+- [ ] Spending analytics by category
+- [ ] Monthly/yearly expense reports
+- [ ] Party expense summaries
+- [ ] Export functionality (CSV, PDF)
+
+### Notifications & Real-time
+- [ ] Email notifications for new expenses
+- [ ] Real-time updates via WebSocket/SSE
+- [ ] Push notifications for mobile
+- [ ] Expense reminder system
+
+### Data Validation & Business Logic
+- [ ] Expense amount validation
+- [ ] Party member limits
+- [ ] Receipt duplicate detection
+- [ ] Data consistency checks
+
 ## Infrastructure
 
 ### CloudFormation Templates
