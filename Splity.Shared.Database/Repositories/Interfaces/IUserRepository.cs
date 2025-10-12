@@ -8,6 +8,7 @@ public interface IUserRepository
     Task<User?> GetUserByIdAsync(Guid userId);
     Task<UserDto?> GetUserByIdWithDetailsAsync(Guid userId);
     Task<User?> GetUserByEmailAsync(string email);
+    Task<User?> GetUserByCognitoIdAsync(string cognitoUserId);
     Task<User> CreateUserAsync(CreateUserRequest request);
     Task<User?> UpdateUserAsync(UpdateUserRequest request);
     Task<bool> DeleteUserAsync(Guid userId);

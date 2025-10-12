@@ -61,6 +61,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Splity.User.Update", "Split
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Splity.User.Update.Tests", "Splity.User.Update\test\Splity.User.Update.Tests\Splity.User.Update.Tests.csproj", "{03B1A1C1-ECF8-43EB-B0A8-D4D840B5A8FD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Splity.Shared.Authentication", "Splity.Shared.Authentication\Splity.Shared.Authentication.csproj", "{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -359,6 +361,18 @@ Global
 		{03B1A1C1-ECF8-43EB-B0A8-D4D840B5A8FD}.Release|x64.Build.0 = Release|Any CPU
 		{03B1A1C1-ECF8-43EB-B0A8-D4D840B5A8FD}.Release|x86.ActiveCfg = Release|Any CPU
 		{03B1A1C1-ECF8-43EB-B0A8-D4D840B5A8FD}.Release|x86.Build.0 = Release|Any CPU
+		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}.Debug|x64.Build.0 = Debug|Any CPU
+		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}.Debug|x86.Build.0 = Debug|Any CPU
+		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}.Release|x64.ActiveCfg = Release|Any CPU
+		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}.Release|x64.Build.0 = Release|Any CPU
+		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}.Release|x86.ActiveCfg = Release|Any CPU
+		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -388,5 +402,6 @@ Global
 		{5254DDA9-EDD2-48EF-85BB-7B759CC1FC30} = {33641F7F-E18E-434F-B81C-10BC62EDEB0C}
 		{0151CD4B-89E7-4328-AC12-AA23768917F4} = {A27D2E3D-1178-4C25-BE70-D74A4CABA232}
 		{03B1A1C1-ECF8-43EB-B0A8-D4D840B5A8FD} = {33641F7F-E18E-434F-B81C-10BC62EDEB0C}
+		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5} = {A27D2E3D-1178-4C25-BE70-D74A4CABA232}
 	EndGlobalSection
 EndGlobal

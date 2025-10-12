@@ -1,0 +1,239 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for Splity Cognito User Pool and authentication infrastructure'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name
+    
+  DomainPrefix:
+    Type: String
+    Default: splity
+    Description: Domain prefix for Cognito hosted UI
+    
+  CallbackURL:
+    Type: String  
+    Default: http://localhost:3000/callback
+    Description: Callback URL for OAuth flows
+    
+  LogoutURL:
+    Type: String
+    Default: http://localhost:3000/
+    Description: Logout URL for OAuth flows
+
+Resources:
+  # Cognito User Pool
+  SplityUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub 'Splity-UserPool-${Environment}'
+      
+      # Account Recovery Settings
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      
+      # Auto-verified attributes
+      AutoVerifiedAttributes:
+        - email
+      
+      # Username configuration
+      UsernameConfiguration:
+        CaseSensitive: false
+      
+      # Username attributes - allow sign in with email
+      AliasAttributes:
+        - email
+        - preferred_username
+      
+      # Password policy
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+      
+      # User pool schema - define custom attributes
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+          Mutable: true
+        - Name: name  
+          AttributeDataType: String
+          Required: true
+          Mutable: true
+        - Name: family_name
+          AttributeDataType: String
+          Required: false
+          Mutable: true
+        - Name: given_name
+          AttributeDataType: String
+          Required: false
+          Mutable: true
+      
+      # Email configuration
+      EmailConfiguration:
+        EmailSendingAccount: COGNITO_DEFAULT
+      
+      # MFA Configuration
+      MfaConfiguration: 'OFF'
+      
+      # User pool add-ons
+      UserPoolAddOns:
+        AdvancedSecurityMode: ENFORCED
+      
+      # Verification message templates
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_CODE
+        EmailMessage: 'Welcome to Splity! Your confirmation code is {####}'
+        EmailSubject: 'Splity - Verify your email'
+      
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: Splity
+
+  # Cognito User Pool Client for Web Application
+  SplityUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub 'Splity-WebApp-${Environment}'
+      UserPoolId: !Ref SplityUserPool
+      
+      # OAuth Flows
+      SupportedIdentityProviders:
+        - COGNITO
+      
+      # OAuth settings
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+      
+      # Callback URLs
+      CallbackURLs:
+        - !Ref CallbackURL
+        - http://localhost:8080/callback
+        - https://localhost:8080/callback
+      LogoutURLs:
+        - !Ref LogoutURL
+        - http://localhost:8080/
+        - https://localhost:8080/
+      
+      # Token validity
+      AccessTokenValidity: 1  # 1 hour
+      IdTokenValidity: 1      # 1 hour
+      RefreshTokenValidity: 30 # 30 days
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+        RefreshToken: days
+      
+      # Security settings
+      GenerateSecret: false  # For web apps, typically no secret needed
+      PreventUserExistenceErrors: ENABLED
+      
+      # Auth flows
+      ExplicitAuthFlows:
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+        - ALLOW_CUSTOM_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      
+      # Read and write attributes
+      ReadAttributes:
+        - email
+        - email_verified
+        - name
+        - family_name
+        - given_name
+      WriteAttributes:
+        - email
+        - name
+        - family_name
+        - given_name
+
+  # Cognito User Pool Domain for Hosted UI
+  SplityUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub '${DomainPrefix}-${Environment}'
+      UserPoolId: !Ref SplityUserPool
+
+  # Lambda function client (for backend API authentication)  
+  SplityUserPoolClientLambda:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub 'Splity-Lambda-${Environment}'
+      UserPoolId: !Ref SplityUserPool
+      
+      # No OAuth for Lambda - just token validation
+      SupportedIdentityProviders:
+        - COGNITO
+      
+      # Token validity
+      AccessTokenValidity: 1  # 1 hour
+      IdTokenValidity: 1      # 1 hour
+      RefreshTokenValidity: 30 # 30 days
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+        RefreshToken: days
+      
+      # Security settings
+      GenerateSecret: true   # Lambda clients can use secrets
+      PreventUserExistenceErrors: ENABLED
+      
+      # Auth flows for Lambda
+      ExplicitAuthFlows:
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
+Outputs:
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref SplityUserPool
+    Export:
+      Name: !Sub '${Environment}-Splity-UserPoolId'
+      
+  UserPoolClientId:
+    Description: Cognito User Pool Web Client ID  
+    Value: !Ref SplityUserPoolClient
+    Export:
+      Name: !Sub '${Environment}-Splity-UserPoolClientId'
+      
+  UserPoolClientLambdaId:
+    Description: Cognito User Pool Lambda Client ID
+    Value: !Ref SplityUserPoolClientLambda
+    Export:
+      Name: !Sub '${Environment}-Splity-UserPoolClientLambdaId'
+      
+  UserPoolDomain:
+    Description: Cognito User Pool Domain
+    Value: !Sub '${DomainPrefix}-${Environment}.auth.${AWS::Region}.amazoncognito.com'
+    Export:
+      Name: !Sub '${Environment}-Splity-UserPoolDomain'
+      
+  HostedUIURL:
+    Description: Cognito Hosted UI URL
+    Value: !Sub 'https://${DomainPrefix}-${Environment}.auth.${AWS::Region}.amazoncognito.com/login?client_id=${SplityUserPoolClient}&response_type=code&scope=email+openid+profile&redirect_uri=${CallbackURL}'
+    Export:
+      Name: !Sub '${Environment}-Splity-HostedUIURL'
+      
+  Region:
+    Description: AWS Region
+    Value: !Ref AWS::Region
+    Export:
+      Name: !Sub '${Environment}-Splity-Region'

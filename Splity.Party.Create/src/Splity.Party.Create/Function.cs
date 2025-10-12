@@ -4,7 +4,8 @@ using System.Text.Json;
 using Amazon;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
-using Splity.Shared.Common;
+using Splity.Shared.Authentication;
+using Splity.Shared.Authentication.Services.Interfaces;
 using Splity.Shared.Database;
 using Splity.Shared.Database.Models.Commands;
 using Splity.Shared.Database.Repositories;
@@ -15,11 +16,11 @@ using Splity.Shared.Database.Repositories.Interfaces;
 
 namespace Splity.Party.Create;
 
-public class Function(IDbConnection connection, IPartyRepository? partyRepository = null) : BaseLambdaFunction
+public class Function(IDbConnection connection, IPartyRepository? partyRepository = null, IAuthenticationService? authService = null) : BaseAuthenticatedLambdaFunction(connection, authService)
 {
     private readonly IPartyRepository _partyRepository = partyRepository ?? new PartyRepository(connection);
 
-    public Function() : this(CreateDatabaseConnection(), null)
+    public Function() : this(CreateDatabaseConnection(), null, null)
     {
     }
 
@@ -38,6 +39,13 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
             return methodValidation;
         }
 
+        // Authenticate user
+        var authResult = await AuthenticateAsync(request, context);
+        if (authResult != null)
+        {
+            return authResult; // Authentication failed
+        }
+
         if (string.IsNullOrEmpty(request.Body))
         {
             return CreateErrorResponse(HttpStatusCode.BadRequest, "Request body is required", "POST");
@@ -48,11 +56,13 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
             context.Logger.LogInformation($"Creating party with request body: {request.Body}");
             var createPartyRequest = JsonSerializer.Deserialize<CreatePartyRequest>(request.Body, JsonOptions);
 
-            if (createPartyRequest == null || createPartyRequest.OwnerId == Guid.Empty || string.IsNullOrWhiteSpace(createPartyRequest.Name))
+            if (createPartyRequest == null || string.IsNullOrWhiteSpace(createPartyRequest.Name))
             {
-                return CreateErrorResponse(HttpStatusCode.BadRequest, "OwnerId and Name are required", "POST");
+                return CreateErrorResponse(HttpStatusCode.BadRequest, "Name is required", "POST");
             }
 
+            // Use the authenticated user's ID as the owner
+            createPartyRequest.OwnerId = CurrentUserId;
             var party = await _partyRepository.CreateParty(createPartyRequest);
 
             return CreateSuccessResponse(HttpStatusCode.Created, party, "POST");
