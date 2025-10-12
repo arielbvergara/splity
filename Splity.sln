@@ -40,6 +40,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionIt
 		.gitignore = .gitignore
 		docs\infra.dot = docs\infra.dot
 		WARP.md = WARP.md
+		splity-infrastructure-cf-template.yaml = splity-infrastructure-cf-template.yaml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Splity.Shared.Common", "Splity.Shared.Common\Splity.Shared.Common.csproj", "{F3F3007B-7AB3-4B22-8FFE-565B04E29E8C}"
@@ -59,13 +60,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Splity.User.Update", "Splity.User.Update\src\Splity.User.Update\Splity.User.Update.csproj", "{0151CD4B-89E7-4328-AC12-AA23768917F4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Splity.User.Update.Tests", "Splity.User.Update\test\Splity.User.Update.Tests\Splity.User.Update.Tests.csproj", "{03B1A1C1-ECF8-43EB-B0A8-D4D840B5A8FD}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CloudFormation", "CloudFormation", "{09A0B195-7542-40CB-9F5E-039C1354B40B}"
-	ProjectSection(SolutionItems) = preProject
-		create-party-lambda-function-cf-template.yaml = create-party-lambda-function-cf-template.yaml
-		api-gateway-cf-template.yaml = api-gateway-cf-template.yaml
-		delete-party-lambda-function-cf-template.yaml = delete-party-lambda-function-cf-template.yaml
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -394,6 +388,5 @@ Global
 		{5254DDA9-EDD2-48EF-85BB-7B759CC1FC30} = {33641F7F-E18E-434F-B81C-10BC62EDEB0C}
 		{0151CD4B-89E7-4328-AC12-AA23768917F4} = {A27D2E3D-1178-4C25-BE70-D74A4CABA232}
 		{03B1A1C1-ECF8-43EB-B0A8-D4D840B5A8FD} = {33641F7F-E18E-434F-B81C-10BC62EDEB0C}
-		{09A0B195-7542-40CB-9F5E-039C1354B40B} = {38AEB5E0-45FC-4539-A529-7D2C3F1ACFF5}
 	EndGlobalSection
 EndGlobal
