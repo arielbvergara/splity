@@ -36,47 +36,44 @@ public class Function(
     public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request,
         ILambdaContext context)
     {
+        var httpMethod = HttpMethod.Delete.ToString();
+
         // Validate HTTP method
-        var methodValidation = ValidateHttpMethod(request, "DELETE");
+        var methodValidation = ValidateHttpMethod(request, httpMethod);
         if (methodValidation != null)
         {
             return methodValidation;
         }
 
-        if (request.QueryStringParameters == null ||
-            !request.QueryStringParameters.TryGetValue("partyId", out var partyId))
+        // Extract party ID from path parameters
+        if (request.PathParameters?.TryGetValue("id", out var partyIdString) != true || !Guid.TryParse(partyIdString, out var partyId))
         {
-            return CreateErrorResponse(HttpStatusCode.BadRequest, "Missing partyId query parameter", "DELETE");
-        }
-
-        if (string.IsNullOrEmpty(partyId) || !Guid.TryParse(partyId, out var guidPartyId))
-        {
-            return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid or missing partyId parameter", "DELETE");
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Valid party ID is required in path", httpMethod);
         }
 
         try
         {
             // 1. Check if party exists
-            var party = await _partyRepository.GetPartyById(guidPartyId);
+            var party = await _partyRepository.GetPartyById(partyId);
             if (party == null)
             {
-                return CreateErrorResponse(HttpStatusCode.BadRequest, $"Party not found {guidPartyId}", "DELETE");
+                return CreateErrorResponse(HttpStatusCode.BadRequest, $"Party not found {partyId}", httpMethod);
             }
 
             // 3. Delete the party
-            await _partyRepository.DeletePartyById(guidPartyId);
+            await _partyRepository.DeletePartyById(partyId);
 
             return CreateSuccessResponse(HttpStatusCode.OK, new PartyDeleteResponse
             {
                 Success = true,
-                Message = $"Party {guidPartyId} deleted successfully",
-                PartyId = guidPartyId
-            }, "DELETE");
+                Message = $"Party {partyId} deleted successfully",
+                PartyId = partyId
+            }, httpMethod);
         }
         catch (Exception ex)
         {
             context.Logger.LogError($"Error deleting party {partyId}: {ex.Message}");
-            return CreateErrorResponse(HttpStatusCode.InternalServerError, $"Error deleting party {partyId}: {ex.Message}", "DELETE");
+            return CreateErrorResponse(HttpStatusCode.InternalServerError, $"Error deleting party {partyId}: {ex.Message}", httpMethod);
         }
     }
 }

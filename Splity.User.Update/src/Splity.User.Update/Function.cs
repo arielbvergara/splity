@@ -4,7 +4,6 @@ using System.Text.Json;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
 using Splity.Shared.Common;
-using Splity.Shared.Database;
 using Splity.Shared.Database.Models.Commands;
 using Splity.Shared.Database.Repositories;
 using Splity.Shared.Database.Repositories.Interfaces;
@@ -28,10 +27,13 @@ public class Function(IDbConnection connection, IUserRepository? userRepository 
     /// <param name="request">The API Gateway proxy request</param>
     /// <param name="context">The ILambdaContext that provides methods for logging and describing the Lambda environment.</param>
     /// <returns></returns>
-    public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
+    public async Task<APIGatewayHttpApiV2ProxyResponse> FunctionHandler(APIGatewayHttpApiV2ProxyRequest request,
+        ILambdaContext context)
     {
+        var httpMethod = HttpMethod.Put.ToString();
+
         // Validate HTTP method
-        var methodValidation = ValidateHttpMethod(request, "PUT");
+        var methodValidation = ValidateHttpMethod(request, httpMethod);
         if (methodValidation != null)
         {
             return methodValidation;
@@ -39,46 +41,57 @@ public class Function(IDbConnection connection, IUserRepository? userRepository 
 
         if (string.IsNullOrEmpty(request.Body))
         {
-            return CreateErrorResponse(HttpStatusCode.BadRequest, "Request body is required", "PUT");
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Request body is required", httpMethod);
+        }
+
+        // Extract user ID from path parameters
+        if (request.PathParameters?.TryGetValue("id", out var userIdString) != true || !Guid.TryParse(userIdString, out var userId))
+        {
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Valid user ID is required in path", httpMethod);
         }
 
         try
         {
-            context.Logger.LogInformation($"Updating user with request body: {request.Body}");
+            context.Logger.LogInformation($"Updating user {userId} with request body: {request.Body}");
             var updateUserRequest = JsonSerializer.Deserialize<UpdateUserRequest>(request.Body, JsonOptions);
 
-            if (updateUserRequest == null || updateUserRequest.UserId == Guid.Empty)
+            if (updateUserRequest == null)
             {
-                return CreateErrorResponse(HttpStatusCode.BadRequest, "UserId is required", "PUT");
+                return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid request format", httpMethod);
             }
+
+            // Set the user ID from the path parameter
+            updateUserRequest.UserId = userId;
 
             // Validate that at least one field is provided for update
             if (string.IsNullOrWhiteSpace(updateUserRequest.Name) && string.IsNullOrWhiteSpace(updateUserRequest.Email))
             {
-                return CreateErrorResponse(HttpStatusCode.BadRequest, "At least one field (Name or Email) must be provided for update", "PUT");
+                return CreateErrorResponse(HttpStatusCode.BadRequest,
+                    "At least one field (Name or Email) must be provided for update", httpMethod);
             }
 
             var updatedUser = await _userRepository.UpdateUserAsync(updateUserRequest);
 
             if (updatedUser == null)
             {
-                return CreateErrorResponse(HttpStatusCode.NotFound, $"User with ID '{updateUserRequest.UserId}' not found", "PUT");
+                return CreateErrorResponse(HttpStatusCode.NotFound,
+                    $"User with ID '{updateUserRequest.UserId}' not found", httpMethod);
             }
 
-            return CreateSuccessResponse(HttpStatusCode.OK, updatedUser, "PUT");
+            return CreateSuccessResponse(HttpStatusCode.OK, updatedUser, httpMethod);
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("already exists"))
         {
-            return CreateErrorResponse(HttpStatusCode.Conflict, ex.Message, "PUT");
+            return CreateErrorResponse(HttpStatusCode.Conflict, ex.Message, httpMethod);
         }
         catch (JsonException)
         {
-            return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid JSON format", "PUT");
+            return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid JSON format", httpMethod);
         }
         catch (Exception ex)
         {
             context.Logger.LogError($"Error updating user: {ex.Message}");
-            return CreateErrorResponse(HttpStatusCode.InternalServerError, "Internal server error", "PUT");
+            return CreateErrorResponse(HttpStatusCode.InternalServerError, "Internal server error", httpMethod);
         }
     }
 }

@@ -285,3 +285,79 @@ Use a subset of the types in the specification.
 Use the footer to add reference to the Jira issue(s) (if applicable)
 Use the title for a short description which can be readable in git clients or gitlab
 Describe the changes (if the title is not enough) in an imperative way (i.e.: Calculate review score using XYZ method)
+
+### CloudFormation Templates
+
+#### Complete Infrastructure Template
+The entire Splity application infrastructure is defined in `splity-infrastructure-cf-template.yaml`.
+
+**Deploy Complete Infrastructure:**
+```bash
+# Deploy complete Splity infrastructure stack
+aws cloudformation deploy \
+  --template-file splity-infrastructure-cf-template.yaml \
+  --stack-name splity-complete-infrastructure-dev \
+  --parameter-overrides Environment=dev \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --region eu-west-2
+
+# Deploy with custom parameters
+aws cloudformation deploy \
+  --template-file splity-infrastructure-cf-template.yaml \
+  --stack-name splity-complete-infrastructure-dev \
+  --parameter-overrides \
+    Environment=dev \
+    ClusterHostname=your-cluster-hostname \
+    S3BucketName=split-app-v1 \
+    DocumentIntelligenceApiKey=your-api-key \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --region eu-west-2
+```
+
+**Deploy All Lambda Code After Infrastructure:**
+After deploying the infrastructure, update all Lambda functions with actual .NET code:
+```bash
+# Party Functions
+cd Splity.Party.Create/src/Splity.Party.Create && dotnet lambda deploy-function --function-name SplityCreateParty-dev --region eu-west-2
+cd ../../../Splity.Party.Get/src/Splity.Party.Get && dotnet lambda deploy-function --function-name SplityGetParty-dev --region eu-west-2
+cd ../../../Splity.Party.Update/src/Splity.Party.Update && dotnet lambda deploy-function --function-name SplityUpdateParty-dev --region eu-west-2
+cd ../../../Splity.Party.Delete/src/Splity.Party.Delete && dotnet lambda deploy-function --function-name SplityDeleteParty-dev --region eu-west-2
+
+# Expense Functions
+cd ../../../Splity.Expenses.Create/src/Splity.Expenses.Create && dotnet lambda deploy-function --function-name SplityCreateExpenses-dev --region eu-west-2
+cd ../../../Splity.Expenses.Delete/src/Splity.Expenses.Delete && dotnet lambda deploy-function --function-name SplityDeleteExpenses-dev --region eu-west-2
+cd ../../../Splity.Expenses.Extract/src/Splity.Expenses.Extract && dotnet lambda deploy-function --function-name SplityExtractExpenses-dev --region eu-west-2
+
+# User Functions
+cd ../../../Splity.User.Create/src/Splity.User.Create && dotnet lambda deploy-function --function-name SplityCreateUser-dev --region eu-west-2
+cd ../../../Splity.User.Get/src/Splity.User.Get && dotnet lambda deploy-function --function-name SplityGetUser-dev --region eu-west-2
+cd ../../../Splity.User.Update/src/Splity.User.Update && dotnet lambda deploy-function --function-name SplityUpdateUser-dev --region eu-west-2
+```
+
+**Stack Outputs:**
+The template provides comprehensive outputs:
+- `ApiGatewayUrl`: Main API endpoint for all operations
+- `ApiGatewayId`: API Gateway ID for reference
+- Function ARNs for all 10 Lambda functions
+- IAM Role ARN for Lambda execution
+- Individual API endpoints for each operation
+
+#### Template Features
+- **Environment-specific deployments** (dev, staging, prod)
+- **Complete CRUD operations** for all entities (Party, Expenses, Users)
+- **API Gateway HTTP API** with CORS support
+- **Comprehensive RESTful routes**:
+  - **Party**: `POST /party`, `GET/PUT/DELETE /party/{id}`
+  - **Expenses**: `POST/DELETE /expenses`, `PUT /party/{partyId}/extract`
+  - **Users**: `POST /users`, `GET/PUT /users/{id}`
+- **IAM roles and permissions** for DSQL, KMS, and S3
+- **Environment variables** configured for all functions
+- **Resource tagging** for organization and cost tracking
+- **Azure Document Intelligence** integration for receipt processing
+- **10 Lambda functions** with placeholder Node.js code
+
+#### Legacy Templates (For Reference)
+- `api-gateway-cf-template.yaml` - Original API Gateway template
+- Individual Lambda function templates - Original single-function templates
+
+The complete template supersedes all individual templates and provides the recommended deployment approach.

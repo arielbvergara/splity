@@ -7,20 +7,29 @@ The application leverages Azure's Document Intelligence for receipt analysis and
 ## Repository Structure
 ```
 .
-├── Splity.Expenses.*/            # Lambda functions for expense management
-│   ├── Create/                   # Creates new expenses
-│   ├── Delete/                   # Deletes existing expenses
-│   ├── Extract/                  # Processes and analyzes receipt images
-│   └── Get/                      # Retrieves expense information
-├── Splity.Party.*/              # Lambda functions for party management
-│   ├── Create/                   # Creates new parties
-│   ├── Delete/                   # Deletes existing parties
-│   └── Get/                      # Retrieves party information
-├── Splity.Shared.*/             # Shared libraries and utilities
-│   ├── AI/                      # Document intelligence services
-│   ├── Common/                  # Common utilities and helpers
-│   ├── Database/               # Database models and repositories
-│   └── Storage/                # S3 storage services
+├── Splity.Expenses.*/                    # Lambda functions for expense management
+│   ├── Create/                           # Creates new expenses
+│   ├── Delete/                           # Deletes existing expenses
+│   ├── Extract/                          # Processes and analyzes receipt images
+│   └── Get/                              # Retrieves expense information
+├── Splity.Party.*/                      # Lambda functions for party management
+│   ├── Create/                           # Creates new parties
+│   ├── Delete/                           # Deletes existing parties
+│   ├── Get/                              # Retrieves party information
+│   └── Update/                           # Updates existing parties
+├── Splity.User.*/                       # Lambda functions for user management
+│   ├── Create/                           # Creates new users
+│   ├── Get/                              # Retrieves user information
+│   └── Update/                           # Updates existing users
+├── Splity.Shared.*/                     # Shared libraries and utilities
+│   ├── AI/                               # Document intelligence services
+│   ├── Common/                           # Common utilities and helpers
+│   ├── Database/                         # Database models and repositories
+│   └── Storage/                          # S3 storage services
+├── splity-infrastructure-cf-template.yaml # Complete CloudFormation template for all entities
+├── api-gateway-cf-template.yaml          # Legacy API Gateway template (reference)
+├── create-party-lambda-function-cf-template.yaml # Legacy individual Lambda templates (reference)
+└── delete-party-lambda-function-cf-template.yaml # Legacy individual Lambda templates (reference)
 ```
 
 ## Usage Instructions
@@ -57,6 +66,61 @@ export DOCUMENT_INTELLIGENCE_API_KEY="your-api-key"
 dotnet restore
 dotnet build
 ```
+
+### Infrastructure Deployment
+
+#### Deploy Complete Infrastructure
+The application uses a comprehensive CloudFormation template for infrastructure as code. Deploy the entire Splity infrastructure:
+
+```bash
+# Deploy complete Splity infrastructure stack
+aws cloudformation deploy \
+  --template-file splity-infrastructure-cf-template.yaml \
+  --stack-name splity-complete-infrastructure-dev \
+  --parameter-overrides Environment=dev \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --region eu-west-2
+```
+
+#### Deploy All Lambda Code
+After infrastructure is deployed, update all Lambda functions with actual .NET code:
+
+```bash
+# Party Functions
+cd Splity.Party.Create/src/Splity.Party.Create && dotnet lambda deploy-function --function-name SplityCreateParty-dev --region eu-west-2
+cd ../../../Splity.Party.Get/src/Splity.Party.Get && dotnet lambda deploy-function --function-name SplityGetParty-dev --region eu-west-2
+cd ../../../Splity.Party.Update/src/Splity.Party.Update && dotnet lambda deploy-function --function-name SplityUpdateParty-dev --region eu-west-2
+cd ../../../Splity.Party.Delete/src/Splity.Party.Delete && dotnet lambda deploy-function --function-name SplityDeleteParty-dev --region eu-west-2
+
+# Expense Functions
+cd ../../../Splity.Expenses.Create/src/Splity.Expenses.Create && dotnet lambda deploy-function --function-name SplityCreateExpenses-dev --region eu-west-2
+cd ../../../Splity.Expenses.Delete/src/Splity.Expenses.Delete && dotnet lambda deploy-function --function-name SplityDeleteExpenses-dev --region eu-west-2
+cd ../../../Splity.Expenses.Extract/src/Splity.Expenses.Extract && dotnet lambda deploy-function --function-name SplityExtractExpenses-dev --region eu-west-2
+
+# User Functions
+cd ../../../Splity.User.Create/src/Splity.User.Create && dotnet lambda deploy-function --function-name SplityCreateUser-dev --region eu-west-2
+cd ../../../Splity.User.Get/src/Splity.User.Get && dotnet lambda deploy-function --function-name SplityGetUser-dev --region eu-west-2
+cd ../../../Splity.User.Update/src/Splity.User.Update && dotnet lambda deploy-function --function-name SplityUpdateUser-dev --region eu-west-2
+```
+
+#### Complete API Endpoints
+After deployment, the following comprehensive RESTful API is available:
+
+**Party Operations:**
+- `POST /party` - Create a new party
+- `GET /party/{id}` - Get party by ID
+- `PUT /party/{id}` - Update party by ID
+- `DELETE /party/{id}` - Delete party by ID
+
+**Expense Operations:**
+- `POST /expenses` - Create expenses for a party
+- `DELETE /expenses` - Delete expenses (bulk operation)
+- `PUT /party/{partyId}/extract` - Upload receipt and extract expense data
+
+**User Operations:**
+- `POST /users` - Create a new user
+- `GET /users/{id}` - Get user by ID
+- `PUT /users/{id}` - Update user by ID
 
 ### Quick Start
 1. Create a new party:
@@ -132,16 +196,47 @@ Key component interactions:
 
 ## Infrastructure
 
-### Lambda Functions
-- SplityCreateExpenses
-- SplityExtractExpenses
-- SplityCreateParty
-- SplityDeleteParty
-- SplityGetParty
+### CloudFormation Templates
+- `splity-infrastructure-cf-template.yaml`: Complete application infrastructure (recommended)
+- Legacy templates (for reference):
+  - `api-gateway-cf-template.yaml`: API Gateway configuration
+  - Individual Lambda function templates
 
-### Storage
-- S3 Bucket: split-app-v1 (eu-central-1)
-- PostgreSQL Database
+### Lambda Functions
+**Party Management:**
+- SplityCreateParty-{env}: Creates new parties
+- SplityGetParty-{env}: Retrieves party information  
+- SplityUpdateParty-{env}: Updates existing parties
+- SplityDeleteParty-{env}: Deletes parties and related data
+
+**Expense Management:**
+- SplityCreateExpenses-{env}: Creates new expenses for parties
+- SplityDeleteExpenses-{env}: Bulk deletes expenses by IDs
+- SplityExtractExpenses-{env}: Processes receipt images via Azure Document Intelligence
+
+**User Management:**
+- SplityCreateUser-{env}: Creates new users
+- SplityGetUser-{env}: Retrieves user information with details
+- SplityUpdateUser-{env}: Updates existing user information
+
+**Total: 10 Lambda functions** deployed with comprehensive CRUD operations
+
+### API Gateway
+- **HTTP API** with CORS support
+- **Environment-specific stages** (dev, staging, prod)
+- **RESTful routing** for all entities
+- **Lambda proxy integration** with payload format 2.0
+
+### Storage & Database
+- **S3 Bucket**: split-app-v1 (eu-central-1) - Receipt image storage
+- **PostgreSQL Database**: AWS DSQL cluster for data persistence
+- **KMS**: Encryption for database connections
+
+### Security & Permissions
+- **IAM Roles**: Environment-specific Lambda execution roles
+- **DSQL Permissions**: Full database access with encryption
+- **API Gateway Permissions**: Lambda invocation permissions
+- **Resource Tagging**: Environment and service identification
 
 ### External Services
-- Azure Document Intelligence API
+- **Azure Document Intelligence API**: Receipt OCR and data extraction
