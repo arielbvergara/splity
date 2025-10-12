@@ -132,6 +132,7 @@ Resources:
   # Lambda Functions (using Node.js placeholders initially)
   SplityCreatePartyFunction:
     Type: AWS::Lambda::Function
+    DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityCreateParty-${Environment}'
       Runtime: nodejs20.x
@@ -173,6 +174,7 @@ Resources:
 
   SplityGetPartyFunction:
     Type: AWS::Lambda::Function
+    DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityGetParty-${Environment}'
       Runtime: nodejs20.x
@@ -214,6 +216,7 @@ Resources:
 
   SplityUpdatePartyFunction:
     Type: AWS::Lambda::Function
+    DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityUpdateParty-${Environment}'
       Runtime: nodejs20.x
@@ -255,6 +258,7 @@ Resources:
 
   SplityDeletePartyFunction:
     Type: AWS::Lambda::Function
+    DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityDeleteParty-${Environment}'
       Runtime: nodejs20.x
@@ -297,6 +301,7 @@ Resources:
   # Expenses Lambda Functions
   SplityCreateExpensesFunction:
     Type: AWS::Lambda::Function
+    DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityCreateExpenses-${Environment}'
       Runtime: nodejs20.x
@@ -338,6 +343,7 @@ Resources:
 
   SplityDeleteExpensesFunction:
     Type: AWS::Lambda::Function
+    DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityDeleteExpenses-${Environment}'
       Runtime: nodejs20.x
@@ -379,6 +385,7 @@ Resources:
 
   SplityExtractExpensesFunction:
     Type: AWS::Lambda::Function
+    DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityExtractExpenses-${Environment}'
       Runtime: nodejs20.x
@@ -423,6 +430,7 @@ Resources:
   # User Lambda Functions
   SplityCreateUserFunction:
     Type: AWS::Lambda::Function
+    DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityCreateUser-${Environment}'
       Runtime: nodejs20.x
@@ -464,6 +472,7 @@ Resources:
 
   SplityGetUserFunction:
     Type: AWS::Lambda::Function
+    DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityGetUser-${Environment}'
       Runtime: nodejs20.x
@@ -505,6 +514,7 @@ Resources:
 
   SplityUpdateUserFunction:
     Type: AWS::Lambda::Function
+    DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityUpdateUser-${Environment}'
       Runtime: nodejs20.x
