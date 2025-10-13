@@ -8,18 +8,18 @@ export const settlementService = {
     const balances = new Map<string, number>()
 
     // Initialize balances for all members
-    party.members.forEach((member) => {
+    party.members?.forEach((member) => {
       balances.set(member.userId, 0)
     })
 
     // Calculate net balance for each member
-    party.expenses.forEach((expense) => {
+    party.expenses?.forEach((expense) => {
       // Person who paid gets positive balance
-      const currentBalance = balances.get(expense.paidBy) || 0
-      balances.set(expense.paidBy, currentBalance + expense.amount)
+      const currentBalance = balances.get(expense.payerId) || 0
+      balances.set(expense.payerId, currentBalance + expense.amount)
 
       // People who owe get negative balance
-      expense.splits.forEach((split) => {
+      expense.splits?.forEach((split) => {
         if (!split.paid) {
           const splitBalance = balances.get(split.userId) || 0
           balances.set(split.userId, splitBalance - split.amount)
@@ -33,7 +33,7 @@ export const settlementService = {
     const creditors: Array<{ userId: string; amount: number }> = []
 
     balances.forEach((balance, userId) => {
-      const member = party.members.find((m) => m.userId === userId)
+      const member = party.members?.find((m) => m.userId === userId)
       if (!member) return
 
       if (balance < -0.01) {
@@ -55,8 +55,8 @@ export const settlementService = {
       const creditor = creditors[j]
       const amount = Math.min(debtor.amount, creditor.amount)
 
-      const debtorMember = party.members.find((m) => m.userId === debtor.userId)
-      const creditorMember = party.members.find((m) => m.userId === creditor.userId)
+      const debtorMember = party.members?.find((m) => m.userId === debtor.userId)
+      const creditorMember = party.members?.find((m) => m.userId === creditor.userId)
 
       if (debtorMember && creditorMember) {
         settlements.push({
@@ -65,7 +65,7 @@ export const settlementService = {
           to: creditor.userId,
           toName: creditorMember.name,
           amount,
-          currency: party.expenses[0]?.currency || "USD",
+          currency: "EUR"
         })
       }
 
@@ -90,7 +90,7 @@ export const settlementService = {
     })
 
     return {
-      partyId: party.id,
+      partyId: party.partyId,
       settlements,
       totalOwed,
       totalOwing,
