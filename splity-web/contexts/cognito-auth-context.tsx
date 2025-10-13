@@ -50,10 +50,16 @@ function CognitoAuthInner({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [userDetails, setUserDetails] = useState<UserWithDetails | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isClient, setIsClient] = useState(false)
+
+  // Initialize client-side state
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   // Extract Cognito user info
   const cognitoUser = oidcAuth.user
-  const isAuthenticated = oidcAuth.isAuthenticated
+  const isAuthenticated = isClient ? oidcAuth.isAuthenticated : false
   const isOidcLoading = oidcAuth.isLoading
 
   const getAccessToken = useCallback(() => {
@@ -87,10 +93,12 @@ function CognitoAuthInner({ children }: { children: React.ReactNode }) {
   // Load or create Splity user when Cognito user changes
   useEffect(() => {
     const loadUser = async () => {
-      if (!isAuthenticated || !cognitoUser?.profile) {
-        setUser(null)
-        setUserDetails(null)
-        setLoading(false)
+      if (!isClient || !isAuthenticated || !cognitoUser?.profile) {
+        if (isClient) {
+          setUser(null)
+          setUserDetails(null)
+          setLoading(false)
+        }
         return
       }
 
@@ -151,7 +159,7 @@ function CognitoAuthInner({ children }: { children: React.ReactNode }) {
     }
 
     loadUser()
-  }, [isAuthenticated, cognitoUser])
+  }, [isClient, isAuthenticated, cognitoUser])
 
   const updateUser = useCallback(async (updates: Partial<User>) => {
     if (!user) return
@@ -170,7 +178,7 @@ function CognitoAuthInner({ children }: { children: React.ReactNode }) {
 
   const contextValue: CognitoAuthContextType = {
     isAuthenticated,
-    isLoading: isOidcLoading || loading,
+    isLoading: !isClient || isOidcLoading || loading,
     cognitoUser,
     user,
     userDetails,
