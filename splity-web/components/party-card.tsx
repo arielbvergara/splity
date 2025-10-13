@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import type { Party } from "@/types"
 import { formatCurrency, getInitials, getAvatarColor } from "@/lib/utils"
-import { useAuth } from "@/contexts/auth-context"
+import { useCognitoAuth } from "@/contexts/cognito-auth-context"
 import { settlementService } from "@/services/settlement-service"
 
 interface PartyCardProps {
@@ -15,16 +15,16 @@ interface PartyCardProps {
 }
 
 export function PartyCard({ party }: PartyCardProps) {
-  const { user } = useAuth()
+  const { user } = useCognitoAuth()
 
   // Calculate user's balance
-  const settlements = user ? settlementService.calculateSettlements(party, user.id) : { totalOwed: 0, totalOwing: 0 }
+  const settlements = user ? settlementService.calculateSettlements(party, user.userId) : { totalOwed: 0, totalOwing: 0 }
 
   const userBalance = settlements.totalOwed - settlements.totalOwing
   const isOwed = userBalance > 0
 
   return (
-    <Link href={`/dashboard/party/${party.id}`}>
+    <Link href={`/dashboard/party/${party.partyId}`}>
       <Card className="border-border bg-card transition-shadow hover:shadow-md cursor-pointer">
         <CardContent className="p-6">
           {/* Header */}

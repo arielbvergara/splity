@@ -4,13 +4,13 @@ import { useState, useEffect } from "react"
 import type { Party, CreatePartyInput } from "@/types"
 import { partyService } from "@/services/party-service"
 import { toast } from "@/hooks/use-toast"
-import { useAuth } from "@/contexts/auth-context"
+import { useCognitoAuth } from "@/contexts/cognito-auth-context"
 
 export function useParties() {
   const [parties, setParties] = useState<Party[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const { user, userDetails } = useAuth()
+  const { user, userDetails } = useCognitoAuth()
 
   useEffect(() => {
     // Load parties from user details instead of separate endpoint (not implemented)

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { Party } from "@/types"
-import { useAuth } from "@/contexts/auth-context"
+import { useCognitoAuth } from "@/contexts/cognito-auth-context"
 import { settlementService } from "@/services/settlement-service"
 import { formatCurrency, getInitials, getAvatarColor } from "@/lib/utils"
 
@@ -14,9 +14,9 @@ interface PartySettlementsProps {
 }
 
 export function PartySettlements({ party }: PartySettlementsProps) {
-  const { user } = useAuth()
+  const { user } = useCognitoAuth()
   const settlements = user
-    ? settlementService.calculateSettlements(party, user.id)
+    ? settlementService.calculateSettlements(party, user.userId)
     : { settlements: [], totalOwed: 0, totalOwing: 0 }
 
   return (
@@ -74,7 +74,7 @@ export function PartySettlements({ party }: PartySettlementsProps) {
                       </p>
                     </div>
                   </div>
-                  {user && settlement.from === user.id && <Button>Mark as Paid</Button>}
+                  {user && settlement.from === user.userId && <Button>Mark as Paid</Button>}
                 </div>
               ))}
             </div>

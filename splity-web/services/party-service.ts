@@ -1,11 +1,11 @@
 // Party management service
 
-import { apiClient } from "@/lib/api-client"
+import { authenticatedApiClient } from "@/lib/authenticated-api-client"
 import type { Party, CreatePartyInput, BackendApiResponse } from "@/types"
 
 export const partyService = {
   async createParty(input: CreatePartyInput): Promise<Party> {
-    const response = await apiClient.post<BackendApiResponse<Party>>("/party", input)
+    const response = await authenticatedApiClient.post<BackendApiResponse<Party>>("/party", input)
     if (!response.success) {
       throw new Error(response.errorMessage || "Failed to create party")
     }
@@ -13,7 +13,7 @@ export const partyService = {
   },
 
   async getParty(id: string): Promise<Party> {
-    const response = await apiClient.get<BackendApiResponse<Party>>(`/party/${id}`)
+    const response = await authenticatedApiClient.get<BackendApiResponse<Party>>(`/party/${id}`)
     if (!response.success) {
       throw new Error(response.errorMessage || "Failed to get party")
     }
@@ -21,7 +21,7 @@ export const partyService = {
   },
 
   async updateParty(id: string, updates: Partial<Party>): Promise<Party> {
-    const response = await apiClient.put<BackendApiResponse<Party>>(`/party/${id}`, updates)
+    const response = await authenticatedApiClient.put<BackendApiResponse<Party>>(`/party/${id}`, updates)
     if (!response.success) {
       throw new Error(response.errorMessage || "Failed to update party")
     }
@@ -29,7 +29,7 @@ export const partyService = {
   },
 
   async deleteParty(id: string): Promise<void> {
-    const response = await apiClient.delete<BackendApiResponse<void>>(`/party/${id}`)
+    const response = await authenticatedApiClient.delete<BackendApiResponse<void>>(`/party/${id}`)
     if (!response.success) {
       throw new Error(response.errorMessage || "Failed to delete party")
     }
