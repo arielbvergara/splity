@@ -52,7 +52,7 @@ export function PartyList() {
       {!loading && filteredParties.length > 0 && (
         <div className="grid gap-6 md:grid-cols-2">
           {filteredParties.map((party) => (
-            <PartyCard key={party.id} party={party} />
+            <PartyCard key={party.partyId} party={party} />
           ))}
         </div>
       )}

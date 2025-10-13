@@ -33,23 +33,23 @@ export function PartyCard({ party }: PartyCardProps) {
               <h3 className="text-lg font-semibold text-card-foreground">{party.name}</h3>
               <div className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Users className="h-4 w-4" />
-                <span>{party.members.length} members</span>
+                <span>{party.members?.length || 0} members</span>
               </div>
             </div>
 
             {/* Member Avatars */}
             <div className="flex -space-x-2">
-              {party.members.slice(0, 3).map((member, index) => (
+              {party.members?.slice(0, 3).map((member, index) => (
                 <Avatar key={index} className="h-9 w-9 border-2 border-card">
                   <AvatarFallback className={`${getAvatarColor(member.name)} text-xs font-medium text-white`}>
                     {getInitials(member.name)}
                   </AvatarFallback>
                 </Avatar>
               ))}
-              {party.members.length > 3 && (
+              {(party.members?.length || 0) > 3 && (
                 <Avatar className="h-9 w-9 border-2 border-card">
                   <AvatarFallback className="bg-muted text-xs font-medium text-muted-foreground">
-                    +{party.members.length - 3}
+                    +{(party.members?.length || 0) - 3}
                   </AvatarFallback>
                 </Avatar>
               )}
@@ -60,7 +60,7 @@ export function PartyCard({ party }: PartyCardProps) {
           <div className="flex items-end justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Total expenses</p>
-              <p className="mt-1 text-2xl font-bold text-card-foreground">{formatCurrency(party.totalExpenses)}</p>
+              <p className="mt-1 text-2xl font-bold text-card-foreground">{formatCurrency(party.totalExpenses || 0)}</p>
             </div>
 
             {Math.abs(userBalance) > 0.01 && (

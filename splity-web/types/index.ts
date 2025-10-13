@@ -34,6 +34,9 @@ export interface Party {
   expenses?: Expense[]
   contributors?: PartyContributor[]
   billImages?: PartyBillsImage[]
+  // Frontend computed fields
+  members?: PartyMember[]
+  totalExpenses?: number
 }
 
 // Additional backend models
