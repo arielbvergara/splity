@@ -16,17 +16,25 @@ import { useCognitoAuth } from "@/contexts/cognito-auth-context"
 
 export function Header() {
   const [isDark, setIsDark] = useState(false)
+  const [isClient, setIsClient] = useState(false)
   const { isAuthenticated, isLoading, user, signIn, signOut } = useCognitoAuth()
 
   useEffect(() => {
-    // Check initial theme
-    const isDarkMode = document.documentElement.classList.contains("dark")
-    setIsDark(isDarkMode)
+    // Mark as client-side rendering to prevent hydration mismatch
+    setIsClient(true)
+    
+    // Check initial theme only on client side
+    if (typeof window !== 'undefined') {
+      const isDarkMode = document.documentElement.classList.contains("dark")
+      setIsDark(isDarkMode)
+    }
   }, [])
 
   const toggleTheme = () => {
-    document.documentElement.classList.toggle("dark")
-    setIsDark(!isDark)
+    if (typeof window !== 'undefined') {
+      document.documentElement.classList.toggle("dark")
+      setIsDark(!isDark)
+    }
   }
 
   return (
@@ -54,7 +62,7 @@ export function Header() {
 
           {/* Navigation */}
           <nav className="flex items-center gap-6">
-            {isAuthenticated && (
+            {isClient && isAuthenticated && (
               <>
                 <Link
                   href="/dashboard"
@@ -79,7 +87,10 @@ export function Header() {
               {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
 
-            {isLoading ? (
+            {!isClient ? (
+              // Show placeholder during SSR to match client initial state
+              <div className="h-9 w-20 rounded bg-muted" />
+            ) : isLoading ? (
               <div className="h-9 w-20 animate-pulse rounded bg-muted" />
             ) : isAuthenticated ? (
               <DropdownMenu>
