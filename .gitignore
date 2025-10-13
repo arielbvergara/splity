@@ -134,3 +134,7 @@ _NCrunch*
 
 # Rider
 /.idea
+
+# Temporary files
+response.json
+init-database.js

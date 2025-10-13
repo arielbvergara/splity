@@ -63,6 +63,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Splity.User.Update.Tests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Splity.Shared.Authentication", "Splity.Shared.Authentication\Splity.Shared.Authentication.csproj", "{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Splity.Database.Initialize", "Splity.Database.Initialize", "{1504CB4D-CDA3-C2BA-79AF-57FFF9999930}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{49F20094-9E7E-DF0F-062B-CCF58867A6B1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Splity.Database.Initialize", "Splity.Database.Initialize\src\Splity.Database.Initialize\Splity.Database.Initialize.csproj", "{94A57340-5A1C-466A-84E6-7220CE3E11D7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -373,6 +379,18 @@ Global
 		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}.Release|x64.Build.0 = Release|Any CPU
 		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}.Release|x86.ActiveCfg = Release|Any CPU
 		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5}.Release|x86.Build.0 = Release|Any CPU
+		{94A57340-5A1C-466A-84E6-7220CE3E11D7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{94A57340-5A1C-466A-84E6-7220CE3E11D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{94A57340-5A1C-466A-84E6-7220CE3E11D7}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{94A57340-5A1C-466A-84E6-7220CE3E11D7}.Debug|x64.Build.0 = Debug|Any CPU
+		{94A57340-5A1C-466A-84E6-7220CE3E11D7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{94A57340-5A1C-466A-84E6-7220CE3E11D7}.Debug|x86.Build.0 = Debug|Any CPU
+		{94A57340-5A1C-466A-84E6-7220CE3E11D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{94A57340-5A1C-466A-84E6-7220CE3E11D7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{94A57340-5A1C-466A-84E6-7220CE3E11D7}.Release|x64.ActiveCfg = Release|Any CPU
+		{94A57340-5A1C-466A-84E6-7220CE3E11D7}.Release|x64.Build.0 = Release|Any CPU
+		{94A57340-5A1C-466A-84E6-7220CE3E11D7}.Release|x86.ActiveCfg = Release|Any CPU
+		{94A57340-5A1C-466A-84E6-7220CE3E11D7}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -403,5 +421,7 @@ Global
 		{0151CD4B-89E7-4328-AC12-AA23768917F4} = {A27D2E3D-1178-4C25-BE70-D74A4CABA232}
 		{03B1A1C1-ECF8-43EB-B0A8-D4D840B5A8FD} = {33641F7F-E18E-434F-B81C-10BC62EDEB0C}
 		{55BDEE22-31A6-47FE-BB85-E4A74645EAE5} = {A27D2E3D-1178-4C25-BE70-D74A4CABA232}
+		{49F20094-9E7E-DF0F-062B-CCF58867A6B1} = {1504CB4D-CDA3-C2BA-79AF-57FFF9999930}
+		{94A57340-5A1C-466A-84E6-7220CE3E11D7} = {49F20094-9E7E-DF0F-062B-CCF58867A6B1}
 	EndGlobalSection
 EndGlobal
