@@ -15,6 +15,11 @@ const cognitoAuthConfig = {
   scope: "email openid profile",
   automaticSilentRenew: true,
   loadUserInfo: true,
+  // Handle cases where name might not be available
+  extraQueryParams: {
+    // This ensures we request profile information
+    response_mode: 'query'
+  }
 }
 
 interface CognitoAuthContextType {
@@ -91,7 +96,12 @@ function CognitoAuthInner({ children }: { children: React.ReactNode }) {
 
       try {
         const email = cognitoUser.profile.email as string
-        const name = (cognitoUser.profile.name || cognitoUser.profile.given_name || email.split('@')[0]) as string
+        const name = (
+          cognitoUser.profile.name || 
+          cognitoUser.profile.given_name || 
+          `${cognitoUser.profile.given_name || ''} ${cognitoUser.profile.family_name || ''}`.trim() ||
+          email.split('@')[0]
+        ) as string
         const cognitoUserId = cognitoUser.profile.sub as string
 
         // Try to find existing user by email
