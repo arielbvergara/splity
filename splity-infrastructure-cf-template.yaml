@@ -60,7 +60,7 @@ Parameters:
     Default: ""
     Description: Cognito User Pool ID for authentication
     
-  CognitoUserPoolClientId:
+  CognitoClientId:
     Type: String
     Default: ""
     Description: Cognito User Pool Client ID for authentication
@@ -197,7 +197,7 @@ Resources:
           AWS_BUCKET_REGION: !Ref S3BucketRegion
           ALLOWED_ORIGINS: !Ref AllowedOrigins
           COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
-          COGNITO_USER_POOL_CLIENT_ID: !Ref CognitoUserPoolClientId
+          COGNITO_CLIENT_ID: !Ref CognitoClientId
       Tags:
         - Key: Environment
           Value: !Ref Environment
