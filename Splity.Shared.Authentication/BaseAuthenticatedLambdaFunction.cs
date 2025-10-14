@@ -6,6 +6,7 @@ using Splity.Shared.Authentication.Models;
 using Splity.Shared.Authentication.Services;
 using Splity.Shared.Authentication.Services.Interfaces;
 using Splity.Shared.Common;
+using Splity.Shared.Common.Configuration;
 using Splity.Shared.Database;
 using Splity.Shared.Database.Repositories;
 
@@ -29,12 +30,39 @@ public abstract class BaseAuthenticatedLambdaFunction : BaseLambdaFunction
         }
         else
         {
-            var userPoolId = Environment.GetEnvironmentVariable("COGNITO_USER_POOL_ID") ?? throw new InvalidOperationException("COGNITO_USER_POOL_ID environment variable is required");
-            var clientId = Environment.GetEnvironmentVariable("COGNITO_CLIENT_ID") ?? throw new InvalidOperationException("COGNITO_CLIENT_ID environment variable is required");
-            var region = Environment.GetEnvironmentVariable("AWS_REGION") ?? "eu-west-2";
+            // Try to get values from configuration service first, fallback to environment variables
+            var userPoolId = GetConfigurationValue("COGNITO_USER_POOL_ID") ?? throw new InvalidOperationException("COGNITO_USER_POOL_ID is required");
+            var clientId = GetConfigurationValue("COGNITO_CLIENT_ID") ?? throw new InvalidOperationException("COGNITO_CLIENT_ID is required");
+            var region = GetConfigurationValue("AWS_REGION") ?? "eu-west-2";
             
             var tokenValidator = new JwtTokenValidator(httpClient, userPoolId, clientId, region);
             _authService = new AuthenticationService(tokenValidator, userRepository);
+        }
+    }
+
+    /// <summary>
+    /// Get configuration value from Parameter Store or environment variables
+    /// </summary>
+    /// <param name="environmentKey">Environment variable key</param>
+    /// <returns>Configuration value</returns>
+    private string? GetConfigurationValue(string environmentKey)
+    {
+        try
+        {
+            // Try to initialize configuration and get value
+            Configuration.InitializeAsync().Wait();
+            return environmentKey switch
+            {
+                "COGNITO_USER_POOL_ID" => Configuration.Authentication.CognitoUserPoolId,
+                "COGNITO_CLIENT_ID" => Configuration.Authentication.CognitoClientId,
+                "AWS_REGION" => Configuration.Aws.Region,
+                _ => Environment.GetEnvironmentVariable(environmentKey)
+            };
+        }
+        catch
+        {
+            // Fallback to environment variable if Parameter Store fails
+            return Environment.GetEnvironmentVariable(environmentKey);
         }
     }
 

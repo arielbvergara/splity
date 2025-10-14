@@ -74,9 +74,89 @@ dotnet add Splity.Shared.Database/Splity.Shared.Database.csproj package [Package
 dotnet add Splity.Party.Create/src/Splity.Party.Create/Splity.Party.Create.csproj package [PackageName]
 ```
 
-## Environment Configuration
+## Configuration Management
 
-### Required Environment Variables
+### Parameter Store Integration
+
+Splity uses AWS Systems Manager Parameter Store for centralized configuration management. This provides several benefits:
+
+- **Centralized Management**: All configuration in one place
+- **Environment Separation**: Different configs for dev, staging, prod
+- **Secure Storage**: Sensitive data encrypted using AWS KMS
+- **Audit Trail**: Track configuration changes
+- **Fallback Support**: Automatic fallback to environment variables
+
+#### Parameter Store Setup
+
+```bash
+# Run the automated setup script
+./scripts/setup-parameter-store.sh [environment] [region]
+
+# Example for dev environment
+./scripts/setup-parameter-store.sh dev eu-west-2
+
+# Example for production environment  
+./scripts/setup-parameter-store.sh prod eu-west-2
+```
+
+#### Parameter Structure
+
+Parameters are organized hierarchically by environment:
+
+```
+/splity/{environment}/
+├── database/
+│   ├── username          # Database username
+│   ├── hostname          # Database hostname (set by CloudFormation)
+│   ├── name              # Database name  
+│   └── region            # Database region
+├── aws/
+│   ├── bucket/
+│   │   ├── name          # S3 bucket name
+│   │   └── region        # S3 bucket region
+│   └── region            # AWS region
+├── azure/
+│   └── document-intelligence/
+│       ├── endpoint      # Azure Document Intelligence endpoint
+│       └── api-key       # Azure API key (SecureString)
+├── cognito/
+│   ├── user-pool-id      # Cognito User Pool ID
+│   └── client-id         # Cognito Client ID
+└── application/
+    └── allowed-origins   # CORS allowed origins
+```
+
+#### Manual Parameter Management
+
+```bash
+# Create or update a parameter
+aws ssm put-parameter \
+  --name "/splity/dev/aws/bucket/name" \
+  --value "split-app-v1" \
+  --type "String" \
+  --overwrite
+
+# Create a secure parameter (encrypted)
+aws ssm put-parameter \
+  --name "/splity/dev/azure/document-intelligence/api-key" \
+  --value "your-secret-key" \
+  --type "SecureString" \
+  --overwrite
+
+# List all parameters for an environment
+aws ssm get-parameters-by-path \
+  --path "/splity/dev/" \
+  --recursive
+
+# Get a specific parameter with decryption
+aws ssm get-parameter \
+  --name "/splity/dev/azure/document-intelligence/api-key" \
+  --with-decryption
+```
+
+### Environment Variables (Fallback)
+
+For backward compatibility, the system falls back to environment variables if Parameter Store is unavailable:
 
 ```bash
 # AWS Configuration
@@ -237,25 +317,70 @@ Infrastructure diagram available at `docs/infra.dot`.
 ### Prerequisites
 - AWS CLI configured with appropriate credentials
 - AWS Lambda Tools installed: `dotnet tool install -g Amazon.Lambda.Tools`
+- Parameter Store configured (see Configuration Management section)
 - Ensure your function builds successfully: `dotnet build`
 
-### Deployment Steps
+### Deployment Steps with Parameter Store
 
-1. **Navigate to the Lambda function directory**:
+1. **Set up Parameter Store** (one-time per environment):
+   ```bash
+   ./scripts/setup-parameter-store.sh dev eu-west-2
+   ```
+
+2. **Deploy CloudFormation stack** (includes Parameter Store resources):
+   ```bash
+   aws cloudformation deploy \
+     --template-file splity-infrastructure-cf-template.yaml \
+     --stack-name splity-complete-infrastructure-dev \
+     --parameter-overrides Environment=dev \
+     --capabilities CAPABILITY_NAMED_IAM \
+     --region eu-west-2
+   ```
+
+3. **Navigate to the Lambda function directory**:
    ```bash
    cd Splity.{Entity}.{Action}/src/Splity.{Entity}.{Action}
    ```
 
-2. **Deploy the function**:
+4. **Deploy the function**:
    ```bash
    dotnet lambda deploy-function
    ```
 
-3. **Verify deployment**:
+5. **Verify deployment**:
    ```bash
    # List your Lambda functions to confirm deployment
    aws lambda list-functions --query 'Functions[?starts_with(FunctionName, `Splity`)].FunctionName'
+   
+   # Test Parameter Store access
+   aws ssm get-parameters-by-path --path "/splity/dev/" --recursive
    ```
+
+### Troubleshooting Parameter Store
+
+#### Common Issues
+
+1. **Parameter Store permissions error**:
+   ```bash
+   # Check if Lambda execution role has SSM permissions
+   aws iam get-role-policy --role-name SplityPartyLambdaRole-dev --policy-name DsqlPermissions
+   ```
+
+2. **Configuration not loading**:
+   - Lambda functions automatically fall back to environment variables
+   - Check CloudWatch logs for initialization errors
+   - Verify parameters exist: `aws ssm get-parameters-by-path --path "/splity/dev/" --recursive`
+
+3. **SecureString decryption errors**:
+   ```bash
+   # Test manual decryption
+   aws ssm get-parameter --name "/splity/dev/azure/document-intelligence/api-key" --with-decryption
+   ```
+
+4. **Performance considerations**:
+   - Configuration is cached after first load per Lambda container
+   - Cold starts may be slightly slower due to Parameter Store calls
+   - Consider using environment variables for frequently accessed, non-sensitive config
 
 ### Deployment Notes
 - The deployment uses settings from `aws-lambda-tools-defaults.json`

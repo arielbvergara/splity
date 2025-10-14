@@ -19,28 +19,72 @@ using Splity.Shared.Storage;
 
 namespace Splity.Expenses.Extract;
 
-public class Function(IDbConnection connection,
-    IS3BucketService? s3BucketService = null,
-    IDocumentIntelligenceService? documentIntelligenceService = null,
-    IPartyRepository? partyRepository = null) : BaseLambdaFunction
+public class Function : BaseLambdaFunction
 {
-    private static readonly Lazy<IAmazonS3> S3Client = new(() =>
-        new AmazonS3Client(RegionEndpoint.GetBySystemName(
-            Environment.GetEnvironmentVariable("AWS_BUCKET_REGION")!)));
+    private readonly IPartyRepository _partyRepository;
+    private IS3BucketService _s3BucketService;
+    private IDocumentIntelligenceService _documentIntelligenceService;
+    private IAmazonS3 _s3Client;
 
-    private readonly IPartyRepository _partyRepository = partyRepository ?? new PartyRepository(connection);
-    private readonly IS3BucketService _s3BucketService = s3BucketService ??
-                       new S3BucketService(
-                           S3Client.Value,
-                           Environment.GetEnvironmentVariable("AWS_BUCKET_NAME")!,
-                           Environment.GetEnvironmentVariable("AWS_BUCKET_REGION")!);
-    private readonly IDocumentIntelligenceService _documentIntelligenceService = documentIntelligenceService ??
-                                   new DocumentIntelligenceService(
-                                       Environment.GetEnvironmentVariable("DOCUMENT_INTELLIGENCE_API_KEY")!,
-                                       Environment.GetEnvironmentVariable("DOCUMENT_INTELLIGENCE_ENDPOINT")!);
-
-    public Function() : this(CreateDatabaseConnection(), null, null, null)
+    public Function(IDbConnection? connection = null,
+        IS3BucketService? s3BucketService = null,
+        IDocumentIntelligenceService? documentIntelligenceService = null,
+        IPartyRepository? partyRepository = null)
     {
+        var dbConnection = connection ?? CreateDatabaseConnection();
+        _partyRepository = partyRepository ?? new PartyRepository(dbConnection);
+        
+        // Initialize services with configuration or fallback to environment variables
+        if (s3BucketService != null && documentIntelligenceService != null)
+        {
+            _s3BucketService = s3BucketService;
+            _documentIntelligenceService = documentIntelligenceService;
+            _s3Client = new AmazonS3Client(RegionEndpoint.EUCentral1); // Default region
+        }
+        else
+        {
+            InitializeServices();
+        }
+    }
+
+    public Function() : this(null, null, null, null)
+    {
+    }
+
+    private void InitializeServices()
+    {
+        try
+        {
+            // Try to initialize with configuration service
+            Configuration.InitializeAsync().Wait();
+            
+            var bucketRegion = Configuration.Aws.BucketRegion ?? "eu-central-1";
+            _s3Client = new AmazonS3Client(RegionEndpoint.GetBySystemName(bucketRegion));
+            
+            _s3BucketService = new S3BucketService(
+                _s3Client,
+                Configuration.Aws.BucketName ?? throw new InvalidOperationException("AWS Bucket name not configured"),
+                bucketRegion);
+                
+            _documentIntelligenceService = new DocumentIntelligenceService(
+                Configuration.Azure.DocumentIntelligenceApiKey ?? throw new InvalidOperationException("Document Intelligence API key not configured"),
+                Configuration.Azure.DocumentIntelligenceEndpoint ?? throw new InvalidOperationException("Document Intelligence endpoint not configured"));
+        }
+        catch
+        {
+            // Fallback to environment variables
+            var bucketRegion = Environment.GetEnvironmentVariable("AWS_BUCKET_REGION") ?? "eu-central-1";
+            _s3Client = new AmazonS3Client(RegionEndpoint.GetBySystemName(bucketRegion));
+            
+            _s3BucketService = new S3BucketService(
+                _s3Client,
+                Environment.GetEnvironmentVariable("AWS_BUCKET_NAME") ?? throw new InvalidOperationException("AWS_BUCKET_NAME environment variable is required"),
+                bucketRegion);
+                
+            _documentIntelligenceService = new DocumentIntelligenceService(
+                Environment.GetEnvironmentVariable("DOCUMENT_INTELLIGENCE_API_KEY") ?? throw new InvalidOperationException("DOCUMENT_INTELLIGENCE_API_KEY environment variable is required"),
+                Environment.GetEnvironmentVariable("DOCUMENT_INTELLIGENCE_ENDPOINT") ?? throw new InvalidOperationException("DOCUMENT_INTELLIGENCE_ENDPOINT environment variable is required"));
+        }
     }
 
     /// <summary>
