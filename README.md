@@ -1,8 +1,37 @@
 # Splity: A Serverless Expense Sharing Application with Receipt Analysis
 
-Splity is a modern serverless application that simplifies expense sharing and management through automated receipt processing and intelligent expense tracking. Built on AWS Lambda with .NET 8, it provides a robust platform for creating and managing shared expenses with automated receipt analysis capabilities.
+Splity is a serverless expense sharing application built with .NET 8 and AWS Lambda that automates receipt processing through Azure Document Intelligence. It uses a microservices architecture with separate Lambda functions for different operations and PostgreSQL for data persistence.
 
-The application leverages Azure's Document Intelligence for receipt analysis and AWS services for serverless computing and storage. It provides comprehensive expense management features including party creation, expense tracking, and automated receipt data extraction. The system uses PostgreSQL for data persistence and implements a microservices architecture through AWS Lambda functions.
+The application provides comprehensive expense management features including party creation, expense tracking, and automated receipt data extraction through intelligent OCR capabilities. Built on AWS services for scalability and Azure's Document Intelligence for advanced receipt analysis.
+
+## Architecture Overview
+
+### Core Components
+
+- **Lambda Functions**: Independent microservices for each operation (Party management, Expense management, User management)
+- **Shared Libraries**: Common functionality across all Lambda functions
+  - `Splity.Shared.Database`: Data models, repositories, and PostgreSQL connection handling
+  - `Splity.Shared.AI`: Azure Document Intelligence service integration  
+  - `Splity.Shared.Storage`: S3 bucket operations for receipt image storage
+  - `Splity.Shared.Common`: API Gateway helpers and common utilities
+
+### Data Flow
+
+1. Client uploads receipt through API Gateway
+2. Lambda function stores image in S3 bucket
+3. Azure Document Intelligence extracts receipt data
+4. Processed data stored in PostgreSQL database
+5. Party and expense management through dedicated Lambda functions
+
+```ascii
+[Client] -> [API Gateway] -> [Lambda Functions]
+                                    |
+                                    v
+[S3 Storage] <- [Receipt Upload] -> [Azure Document Intelligence]
+                                    |
+                                    v
+                              [PostgreSQL DB]
+```
 
 ## Repository Structure
 ```
