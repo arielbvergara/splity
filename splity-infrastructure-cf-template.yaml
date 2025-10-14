@@ -166,8 +166,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityCreateParty-${Environment}'
-      Runtime: nodejs20.x
-      Handler: index.handler
+      Runtime: dotnet8
+      Handler: bootstrap
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -211,8 +211,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityGetParty-${Environment}'
-      Runtime: nodejs20.x
-      Handler: index.handler
+      Runtime: dotnet8
+      Handler: bootstrap
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -254,8 +254,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityUpdateParty-${Environment}'
-      Runtime: nodejs20.x
-      Handler: index.handler
+      Runtime: dotnet8
+      Handler: bootstrap
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -297,8 +297,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityDeleteParty-${Environment}'
-      Runtime: nodejs20.x
-      Handler: index.handler
+      Runtime: dotnet8
+      Handler: bootstrap
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -341,8 +341,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityCreateExpenses-${Environment}'
-      Runtime: nodejs20.x
-      Handler: index.handler
+      Runtime: dotnet8
+      Handler: bootstrap
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -384,8 +384,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityDeleteExpenses-${Environment}'
-      Runtime: nodejs20.x
-      Handler: index.handler
+      Runtime: dotnet8
+      Handler: bootstrap
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -427,8 +427,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityExtractExpenses-${Environment}'
-      Runtime: nodejs20.x
-      Handler: index.handler
+      Runtime: dotnet8
+      Handler: bootstrap
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -473,8 +473,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityCreateUser-${Environment}'
-      Runtime: nodejs20.x
-      Handler: index.handler
+      Runtime: dotnet8
+      Handler: bootstrap
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -516,8 +516,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityGetUser-${Environment}'
-      Runtime: nodejs20.x
-      Handler: index.handler
+      Runtime: dotnet8
+      Handler: bootstrap
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -559,8 +559,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityUpdateUser-${Environment}'
-      Runtime: nodejs20.x
-      Handler: index.handler
+      Runtime: dotnet8
+      Handler: bootstrap
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
