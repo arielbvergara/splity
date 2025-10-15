@@ -33,47 +33,6 @@ Each Lambda function follows a consistent pattern:
 4. Processed data stored in PostgreSQL database
 5. Party and expense management through dedicated Lambda functions
 
-## Development Commands
-
-### Building and Testing
-
-```bash
-# Restore dependencies for entire solution
-dotnet restore
-
-# Build entire solution
-dotnet build
-
-# Run all tests
-dotnet test
-
-# Run tests for specific project
-dotnet test Splity.Party.Create/test/Splity.Party.Create.Tests/
-
-# Build specific Lambda function
-dotnet build Splity.Party.Create/src/Splity.Party.Create/
-```
-
-### Working with Individual Lambda Functions
-
-```bash
-# Build a specific Lambda function for deployment
-dotnet publish Splity.Party.Create/src/Splity.Party.Create/ -c Release -o ./publish
-
-# Run tests for a specific function
-dotnet test Splity.Expenses.Extract/test/Splity.Expenses.Extract.Tests/
-```
-
-### Package Management
-
-```bash
-# Add package to shared library
-dotnet add Splity.Shared.Database/Splity.Shared.Database.csproj package [PackageName]
-
-# Add package to specific Lambda function
-dotnet add Splity.Party.Create/src/Splity.Party.Create/Splity.Party.Create.csproj package [PackageName]
-```
-
 ## Configuration Management
 
 ### Parameter Store Integration
@@ -154,28 +113,6 @@ aws ssm get-parameter \
   --with-decryption
 ```
 
-### Environment Variables (Fallback)
-
-For backward compatibility, the system falls back to environment variables if Parameter Store is unavailable:
-
-```bash
-# AWS Configuration
-export AWS_BUCKET_NAME="split-app-v1"
-export AWS_BUCKET_REGION="eu-central-1"
-
-# Database Configuration
-export CLUSTER_USERNAME="admin" 
-export CLUSTER_HOSTNAME="[your-cluster-hostname]"
-export CLUSTER_DATABASE="postgres"
-
-# Azure Document Intelligence
-export DOCUMENT_INTELLIGENCE_ENDPOINT="https://di-document-reader-test.cognitiveservices.azure.com/"
-export DOCUMENT_INTELLIGENCE_API_KEY="[your-api-key]"
-
-# CORS Configuration
-export ALLOWED_ORIGINS="*"
-```
-
 ## Project Structure Guidelines
 
 ### Lambda Functions
@@ -194,39 +131,6 @@ export ALLOWED_ORIGINS="*"
 - Tests use XUnit framework with Amazon.Lambda.TestUtilities
 - Repository pattern enables easy mocking for unit tests
 
-## Dependencies
-
-### Key NuGet Packages
-- **AWS**: Amazon.Lambda.Core, Amazon.Lambda.APIGatewayEvents, AWSSDK.Core
-- **Database**: Npgsql for PostgreSQL connectivity, AWSSDK.DSQL
-- **AI**: Azure.AI.DocumentIntelligence
-- **Testing**: xunit, Amazon.Lambda.TestUtilities
-
-### External Services
-- **AWS Lambda**: Serverless compute platform
-- **Amazon S3**: Receipt image storage  
-- **Amazon API Gateway**: REST API endpoint management
-- **PostgreSQL**: Primary database (AWS-managed)
-- **Azure Document Intelligence**: Receipt OCR and data extraction
-
-## Common Development Tasks
-
-### Adding New Lambda Function
-1. Create function directory following `Splity.{Domain}.{Action}` pattern
-2. Add `src/` and `test/` subdirectories
-3. Reference required shared libraries in `.csproj`
-4. Implement Function class with `FunctionHandler` method
-5. Add function to `Splity.sln`
-
-### Working with Database
-- Connection management through `DsqlConnectionHelper`  
-- Repository pattern for data access
-- Models defined in `Splity.Shared.Database/Models/`
-
-### Receipt Processing Integration
-- Upload images via `S3BucketService`
-- Process with `DocumentIntelligenceService` 
-- Extract data gets stored via repositories
 
 ## Deployment Infrastructure
 
@@ -337,15 +241,25 @@ Infrastructure diagram available at `docs/infra.dot`.
      --region eu-west-2
    ```
 
-3. **Navigate to the Lambda function directory**:
-   ```bash
-   cd Splity.{Entity}.{Action}/src/Splity.{Entity}.{Action}
-   ```
+3. **Deploy All Lambda Code After Infrastructure:**
+    After deploying the infrastructure, update all Lambda functions with actual .NET code:
+    ```bash
+    # Party Functions
+    cd Splity.Party.Create/src/Splity.Party.Create && dotnet lambda deploy-function --function-name SplityCreateParty-dev --region eu-west-2
+    cd ../../../Splity.Party.Get/src/Splity.Party.Get && dotnet lambda deploy-function --function-name SplityGetParty-dev --region eu-west-2
+    cd ../../../Splity.Party.Update/src/Splity.Party.Update && dotnet lambda deploy-function --function-name SplityUpdateParty-dev --region eu-west-2
+    cd ../../../Splity.Party.Delete/src/Splity.Party.Delete && dotnet lambda deploy-function --function-name SplityDeleteParty-dev --region eu-west-2
 
-4. **Deploy the function**:
-   ```bash
-   dotnet lambda deploy-function
-   ```
+       # Expense Functions
+    cd ../../../Splity.Expenses.Create/src/Splity.Expenses.Create && dotnet lambda deploy-function --function-name SplityCreateExpenses-dev --region eu-west-2
+    cd ../../../Splity.Expenses.Delete/src/Splity.Expenses.Delete && dotnet lambda deploy-function --function-name SplityDeleteExpenses-dev --region eu-west-2
+    cd ../../../Splity.Expenses.Extract/src/Splity.Expenses.Extract && dotnet lambda deploy-function --function-name SplityExtractExpenses-dev --region eu-west-2
+
+       # User Functions
+    cd ../../../Splity.User.Create/src/Splity.User.Create && dotnet lambda deploy-function --function-name SplityCreateUser-dev --region eu-west-2
+    cd ../../../Splity.User.Get/src/Splity.User.Get && dotnet lambda deploy-function --function-name SplityGetUser-dev --region eu-west-2
+    cd ../../../Splity.User.Update/src/Splity.User.Update && dotnet lambda deploy-function --function-name SplityUpdateUser-dev --region eu-west-2
+    ```
 
 5. **Verify deployment**:
    ```bash
@@ -383,18 +297,19 @@ Infrastructure diagram available at `docs/infra.dot`.
    - Consider using environment variables for frequently accessed, non-sensitive config
 
 ### Deployment Notes
-- The deployment uses settings from `aws-lambda-tools-defaults.json`
 - If the function doesn't exist, it will be created
 - If it exists, it will be updated with new code
 - Environment variables are set automatically from the defaults file
 - Function timeout is set to 30 seconds (adjustable based on requirements)
 - To delete stack after rollback, run:
 ```bash
-    aws cloudformation delete-stack --stack-name splity-complete-infrastructure-dev --region eu-west-2
+    aws cloudformation delete-stack \ 
+    --stack-name splity-complete-infrastructure-dev \
+    --region eu-west-2
 ```
 - **Environment Variable Updates**: If you need to update environment variables after deployment (e.g., actual hostnames vs placeholders), use:
   ```bash
-  aws lambda update-function-configuration \
+    aws lambda update-function-configuration \
     --function-name [FunctionName] \
     --region eu-west-2 \
     --environment Variables="{KEY1=VALUE1,KEY2=VALUE2}"
@@ -442,51 +357,3 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_NAMED_IAM \
   --region eu-west-2
 ```
-
-**Deploy All Lambda Code After Infrastructure:**
-After deploying the infrastructure, update all Lambda functions with actual .NET code:
-```bash
-# Party Functions
-cd Splity.Party.Create/src/Splity.Party.Create && dotnet lambda deploy-function --function-name SplityCreateParty-dev --region eu-west-2
-cd ../../../Splity.Party.Get/src/Splity.Party.Get && dotnet lambda deploy-function --function-name SplityGetParty-dev --region eu-west-2
-cd ../../../Splity.Party.Update/src/Splity.Party.Update && dotnet lambda deploy-function --function-name SplityUpdateParty-dev --region eu-west-2
-cd ../../../Splity.Party.Delete/src/Splity.Party.Delete && dotnet lambda deploy-function --function-name SplityDeleteParty-dev --region eu-west-2
-
-# Expense Functions
-cd ../../../Splity.Expenses.Create/src/Splity.Expenses.Create && dotnet lambda deploy-function --function-name SplityCreateExpenses-dev --region eu-west-2
-cd ../../../Splity.Expenses.Delete/src/Splity.Expenses.Delete && dotnet lambda deploy-function --function-name SplityDeleteExpenses-dev --region eu-west-2
-cd ../../../Splity.Expenses.Extract/src/Splity.Expenses.Extract && dotnet lambda deploy-function --function-name SplityExtractExpenses-dev --region eu-west-2
-
-# User Functions
-cd ../../../Splity.User.Create/src/Splity.User.Create && dotnet lambda deploy-function --function-name SplityCreateUser-dev --region eu-west-2
-cd ../../../Splity.User.Get/src/Splity.User.Get && dotnet lambda deploy-function --function-name SplityGetUser-dev --region eu-west-2
-cd ../../../Splity.User.Update/src/Splity.User.Update && dotnet lambda deploy-function --function-name SplityUpdateUser-dev --region eu-west-2
-```
-
-**Stack Outputs:**
-The template provides comprehensive outputs:
-- `ApiGatewayUrl`: Main API endpoint for all operations
-- `ApiGatewayId`: API Gateway ID for reference
-- Function ARNs for all 10 Lambda functions
-- IAM Role ARN for Lambda execution
-- Individual API endpoints for each operation
-
-#### Template Features
-- **Environment-specific deployments** (dev, staging, prod)
-- **Complete CRUD operations** for all entities (Party, Expenses, Users)
-- **API Gateway HTTP API** with CORS support
-- **Comprehensive RESTful routes**:
-  - **Party**: `POST /party`, `GET/PUT/DELETE /party/{id}`
-  - **Expenses**: `POST/DELETE /expenses`, `PUT /party/{partyId}/extract`
-  - **Users**: `POST /users`, `GET/PUT /users/{id}`
-- **IAM roles and permissions** for DSQL, KMS, and S3
-- **Environment variables** configured for all functions
-- **Resource tagging** for organization and cost tracking
-- **Azure Document Intelligence** integration for receipt processing
-- **10 Lambda functions** with placeholder Node.js code
-
-#### Legacy Templates (For Reference)
-- `api-gateway-cf-template.yaml` - Original API Gateway template
-- Individual Lambda function templates - Original single-function templates
-
-The complete template supersedes all individual templates and provides the recommended deployment approach.
