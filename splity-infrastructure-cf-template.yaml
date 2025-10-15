@@ -186,13 +186,17 @@ Resources:
                       - !Sub 'ssm.${AWS::Region}.amazonaws.com'
 
   # Lambda Functions (using Node.js placeholders initially)
+  # NOTE: Using nodejs18.x runtime with index.handler because dotnet8 runtime
+  # does not support inline ZipFile code. The placeholder JavaScript code allows
+  # CloudFormation to create the functions, then actual .NET code is deployed
+  # later using 'dotnet lambda deploy-function' commands.
   SplityCreatePartyFunction:
     Type: AWS::Lambda::Function
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityCreateParty-${Environment}'
-      Runtime: dotnet8
-      Handler: bootstrap
+      Runtime: nodejs18.x
+      Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -236,8 +240,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityGetParty-${Environment}'
-      Runtime: dotnet8
-      Handler: bootstrap
+      Runtime: nodejs18.x
+      Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -279,8 +283,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityUpdateParty-${Environment}'
-      Runtime: dotnet8
-      Handler: bootstrap
+      Runtime: nodejs18.x
+      Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -322,8 +326,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityDeleteParty-${Environment}'
-      Runtime: dotnet8
-      Handler: bootstrap
+      Runtime: nodejs18.x
+      Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -366,8 +370,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityCreateExpenses-${Environment}'
-      Runtime: dotnet8
-      Handler: bootstrap
+      Runtime: nodejs18.x
+      Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -409,8 +413,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityDeleteExpenses-${Environment}'
-      Runtime: dotnet8
-      Handler: bootstrap
+      Runtime: nodejs18.x
+      Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -452,8 +456,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityExtractExpenses-${Environment}'
-      Runtime: dotnet8
-      Handler: bootstrap
+      Runtime: nodejs18.x
+      Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -498,8 +502,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityCreateUser-${Environment}'
-      Runtime: dotnet8
-      Handler: bootstrap
+      Runtime: nodejs18.x
+      Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -541,8 +545,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityGetUser-${Environment}'
-      Runtime: dotnet8
-      Handler: bootstrap
+      Runtime: nodejs18.x
+      Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
@@ -584,8 +588,8 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityUpdateUser-${Environment}'
-      Runtime: dotnet8
-      Handler: bootstrap
+      Runtime: nodejs18.x
+      Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
         ZipFile: |
