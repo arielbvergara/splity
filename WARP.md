@@ -388,6 +388,10 @@ Infrastructure diagram available at `docs/infra.dot`.
 - If it exists, it will be updated with new code
 - Environment variables are set automatically from the defaults file
 - Function timeout is set to 30 seconds (adjustable based on requirements)
+- To delete stack after rollback, run:
+```bash
+    aws cloudformation delete-stack --stack-name splity-complete-infrastructure-dev --region eu-west-2
+```
 - **Environment Variable Updates**: If you need to update environment variables after deployment (e.g., actual hostnames vs placeholders), use:
   ```bash
   aws lambda update-function-configuration \
