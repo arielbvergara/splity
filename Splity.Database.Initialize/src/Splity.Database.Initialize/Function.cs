@@ -1,6 +1,8 @@
 using System;
 using System.Data;
+using System.IO;
 using System.Net;
+using System.Reflection;
 using System.Threading.Tasks;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
@@ -37,68 +39,25 @@ public class Function : BaseLambdaFunction
         {
             context.Logger.LogInformation("Initializing database schema...");
 
-            // SQL commands to create all required tables
-            var createUsersSql = @"
-                CREATE TABLE IF NOT EXISTS Users (
-                    UserId UUID PRIMARY KEY,
-                    Name TEXT NOT NULL,
-                    Email TEXT UNIQUE NOT NULL,
-                    CognitoUserId TEXT,
-                    CreatedAt TIMESTAMP DEFAULT NOW()
-                );";
+            // Read SQL script from embedded resource
+            var sqlScript = ReadEmbeddedSqlScript();
+            context.Logger.LogInformation($"Loaded SQL script with {sqlScript.Length} characters");
 
-            var createPartiesSql = @"
-                CREATE TABLE IF NOT EXISTS Parties (
-                    PartyId UUID PRIMARY KEY,
-                    OwnerId UUID NOT NULL,
-                    Name TEXT NOT NULL,
-                    CreatedAt TIMESTAMP DEFAULT NOW()
-                );";
+            // Split script by semicolons and execute each statement
+            var sqlStatements = sqlScript.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+            
+            foreach (var statement in sqlStatements)
+            {
+                var trimmedStatement = statement.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmedStatement) && !trimmedStatement.StartsWith("--"))
+                {
+                    await ExecuteSqlAsync(_connection, trimmedStatement, context);
+                }
+            }
 
-            var createExpensesSql = @"
-                CREATE TABLE IF NOT EXISTS Expenses (
-                    ExpenseId UUID PRIMARY KEY,
-                    PartyId UUID NOT NULL,
-                    PayerId UUID NOT NULL,
-                    Description TEXT NOT NULL,
-                    Amount NUMERIC(10, 2) NOT NULL,
-                    CreatedAt TIMESTAMP DEFAULT NOW()
-                );";
+            context.Logger.LogInformation($"Database schema initialization completed successfully! Executed {sqlStatements.Length} statements.");
 
-            var createPartyContributorsSql = @"
-                CREATE TABLE IF NOT EXISTS PartyContributors (
-                    PartyId UUID NOT NULL,
-                    UserId UUID NOT NULL,
-                    PRIMARY KEY (PartyId, UserId)
-                );";
-
-            var createExpenseParticipantsSql = @"
-                CREATE TABLE IF NOT EXISTS ExpenseParticipants (
-                    ExpenseId UUID NOT NULL,
-                    UserId UUID NOT NULL,
-                    Share NUMERIC(10, 2),
-                    PRIMARY KEY (ExpenseId, UserId)
-                );";
-
-            var createPartyBillsImagesSql = @"
-                CREATE TABLE IF NOT EXISTS PartyBillsImages (
-                    BillId UUID PRIMARY KEY,
-                    BillFileTitle TEXT NOT NULL,
-                    PartyId UUID NOT NULL,
-                    ImageURL TEXT NOT NULL
-                );";
-
-            // Execute each CREATE TABLE statement
-            await ExecuteSqlAsync(_connection, createUsersSql, context);
-            await ExecuteSqlAsync(_connection, createPartiesSql, context);
-            await ExecuteSqlAsync(_connection, createExpensesSql, context);
-            await ExecuteSqlAsync(_connection, createPartyContributorsSql, context);
-            await ExecuteSqlAsync(_connection, createExpenseParticipantsSql, context);
-            await ExecuteSqlAsync(_connection, createPartyBillsImagesSql, context);
-
-            context.Logger.LogInformation("Database schema initialization completed successfully!");
-
-            return CreateSuccessResponse(HttpStatusCode.OK, new { message = "Database schema initialized successfully", tablesCreated = 6 }, "GET");
+            return CreateSuccessResponse(HttpStatusCode.OK, new { message = "Database schema initialized successfully", statementsExecuted = sqlStatements.Length }, "GET");
         }
         catch (Exception ex)
         {
@@ -121,5 +80,20 @@ public class Function : BaseLambdaFunction
         }
         
         await Task.Run(() => command.ExecuteNonQuery());
+    }
+    
+    private static string ReadEmbeddedSqlScript()
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        var resourceName = "Splity.Database.Initialize.database-schema.sql";
+        
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream == null)
+        {
+            throw new FileNotFoundException($"Embedded resource '{resourceName}' not found.");
+        }
+        
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
     }
 }

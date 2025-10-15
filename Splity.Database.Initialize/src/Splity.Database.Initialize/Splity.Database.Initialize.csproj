@@ -18,4 +18,7 @@
     <ProjectReference Include="..\..\..\Splity.Shared.Database\Splity.Shared.Database.csproj" />
     <ProjectReference Include="..\..\..\Splity.Shared.Common\Splity.Shared.Common.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="database-schema.sql" />
+  </ItemGroup>
 </Project>
