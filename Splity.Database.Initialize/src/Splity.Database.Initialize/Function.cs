@@ -1,13 +1,9 @@
-using System;
 using System.Data;
-using System.IO;
 using System.Net;
 using System.Reflection;
-using System.Threading.Tasks;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
 using Splity.Shared.Common;
-using Splity.Shared.Database;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
@@ -43,21 +39,38 @@ public class Function : BaseLambdaFunction
             var sqlScript = ReadEmbeddedSqlScript();
             context.Logger.LogInformation($"Loaded SQL script with {sqlScript.Length} characters");
 
-            // Split script by semicolons and execute each statement
-            var sqlStatements = sqlScript.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+            // Split script by semicolons and filter/sort statements
+            var allStatements = sqlScript.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrWhiteSpace(s) && !s.StartsWith("--"))
+                .ToList();
             
-            foreach (var statement in sqlStatements)
+            context.Logger.LogInformation($"Parsed {allStatements.Count} SQL statements from script");
+            foreach (var stmt in allStatements)
             {
-                var trimmedStatement = statement.Trim();
-                if (!string.IsNullOrWhiteSpace(trimmedStatement) && !trimmedStatement.StartsWith("--"))
-                {
-                    await ExecuteSqlAsync(_connection, trimmedStatement, context);
-                }
+                var preview = stmt.Substring(0, Math.Min(50, stmt.Length)).Replace("\n", " ").Replace("\r", "");
+                context.Logger.LogInformation($"Statement: {preview}...");
+            }
+            
+            // Separate CREATE TABLE from CREATE INDEX statements to ensure proper execution order
+            var createTableStatements = allStatements.Where(s => s.Contains("CREATE TABLE", StringComparison.OrdinalIgnoreCase)).ToList();
+            var createIndexStatements = allStatements.Where(s => s.Contains("CREATE INDEX", StringComparison.OrdinalIgnoreCase)).ToList();
+            var otherStatements = allStatements.Except(createTableStatements).Except(createIndexStatements).ToList();
+            
+            context.Logger.LogInformation($"Found {createTableStatements.Count} CREATE TABLE, {createIndexStatements.Count} CREATE INDEX, {otherStatements.Count} other statements");
+            
+            // Execute in proper order: CREATE TABLE first, then CREATE INDEX, then others
+            var orderedStatements = createTableStatements.Concat(createIndexStatements).Concat(otherStatements);
+            
+            foreach (var statement in orderedStatements)
+            {
+                await ExecuteSqlAsync(_connection, statement, context);
             }
 
-            context.Logger.LogInformation($"Database schema initialization completed successfully! Executed {sqlStatements.Length} statements.");
+            var executedCount = orderedStatements.Count();
+            context.Logger.LogInformation($"Database schema initialization completed successfully! Executed {executedCount} statements.");
 
-            return CreateSuccessResponse(HttpStatusCode.OK, new { message = "Database schema initialized successfully", statementsExecuted = sqlStatements.Length }, "GET");
+            return CreateSuccessResponse(HttpStatusCode.OK, new { message = "Database schema initialized successfully", statementsExecuted = executedCount }, "GET");
         }
         catch (Exception ex)
         {

@@ -59,10 +59,10 @@ CREATE TABLE IF NOT EXISTS partybillsimages (
     FOREIGN KEY (PartyId) REFERENCES parties(PartyId) ON DELETE CASCADE
 );
 
--- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_parties_owner ON parties(OwnerId);
-CREATE INDEX IF NOT EXISTS idx_expenses_party ON expenses(PartyId);
-CREATE INDEX IF NOT EXISTS idx_expenses_payer ON expenses(PayerId);
-CREATE INDEX IF NOT EXISTS idx_partybillsimages_party ON partybillsimages(PartyId);
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(Email);
-CREATE INDEX IF NOT EXISTS idx_users_cognito ON users(CognitoUserId);
+-- Create indexes for better performance (using ASYNC for Aurora DSQL compatibility)
+CREATE INDEX ASYNC IF NOT EXISTS idx_parties_owner ON parties(OwnerId);
+CREATE INDEX ASYNC IF NOT EXISTS idx_expenses_party ON expenses(PartyId);
+CREATE INDEX ASYNC IF NOT EXISTS idx_expenses_payer ON expenses(PayerId);
+CREATE INDEX ASYNC IF NOT EXISTS idx_partybillsimages_party ON partybillsimages(PartyId);
+CREATE INDEX ASYNC IF NOT EXISTS idx_users_email ON users(Email);
+CREATE INDEX ASYNC IF NOT EXISTS idx_users_cognito ON users(CognitoUserId);
