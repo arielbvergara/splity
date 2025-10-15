@@ -98,8 +98,27 @@ dotnet build
 
 ### Infrastructure Deployment
 
-#### Deploy Complete Infrastructure
-The application uses a comprehensive CloudFormation template for infrastructure as code. Deploy the entire Splity infrastructure:
+#### Step 1: Configure Parameter Store
+First, set up application configuration using the interactive script:
+
+```bash
+# Set up Parameter Store with interactive configuration
+./scripts/setup-parameter-store.sh dev eu-west-2
+```
+
+This script will:
+- Create all required Parameter Store parameters
+- Securely store sensitive data (API keys) as encrypted SecureString parameters
+- Handle existing parameters gracefully
+
+**If you encounter Parameter Store conflicts during CloudFormation deployment:**
+```bash
+# The parameters already exist from the setup script, which is expected
+# The CloudFormation template no longer manages Parameter Store to avoid this conflict
+```
+
+#### Step 2: Deploy Infrastructure
+After Parameter Store is configured, deploy the CloudFormation infrastructure:
 
 ```bash
 # Deploy complete Splity infrastructure stack
@@ -111,7 +130,9 @@ aws cloudformation deploy \
   --region eu-west-2
 ```
 
-#### Deploy All Lambda Code
+> **Note**: The CloudFormation template focuses on infrastructure (DSQL cluster, IAM roles, Lambda functions) while Parameter Store configuration is handled separately by the setup script to avoid conflicts and provide better security for sensitive data.
+
+#### Step 3: Deploy Lambda Code
 After infrastructure is deployed, update all Lambda functions with actual .NET code:
 
 ```bash

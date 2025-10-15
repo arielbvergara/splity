@@ -25,12 +25,12 @@ Parameters:
     
   S3BucketName:
     Type: String
-    Default: split-app-v1
+    Default: split-app-v1 # TODO: Add S3 bucket to cloud formation and make it dynamic
     Description: S3 bucket for receipt storage
     
   S3BucketRegion:
     Type: String
-    Default: eu-central-1
+    Default: eu-central-1 # TODO: Add S3 bucket to cloud formation and make it dynamic
     Description: S3 bucket region
     
   AllowedOrigins:
@@ -70,157 +70,8 @@ Conditions:
   HasCognitoClient: !Not [!Equals [!Ref CognitoClientId, ""]]
 
 Resources:
-  # Parameter Store - Database Configuration
-  ParameterDatabaseUsername:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub '/splity/${Environment}/database/username'
-      Type: String
-      Value: !Ref ClusterUsername
-      Description: !Sub 'Database username for ${Environment} environment'
-      Tags:
-        Environment: !Ref Environment
-        Service: Splity
-        Category: Database
-
-  ParameterDatabaseName:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub '/splity/${Environment}/database/name'
-      Type: String
-      Value: !Ref ClusterDatabase
-      Description: !Sub 'Database name for ${Environment} environment'
-      Tags:
-        Environment: !Ref Environment
-        Service: Splity
-        Category: Database
-
-  ParameterDatabaseRegion:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub '/splity/${Environment}/database/region'
-      Type: String
-      Value: !Ref AWS::Region
-      Description: !Sub 'Database region for ${Environment} environment'
-      Tags:
-        Environment: !Ref Environment
-        Service: Splity
-        Category: Database
-
-  ParameterDatabaseHostname:
-    Type: AWS::SSM::Parameter
-    DependsOn: SplityDsqlCluster
-    Properties:
-      Name: !Sub '/splity/${Environment}/database/hostname'
-      Type: String
-      Value: !Sub '${SplityDsqlCluster}.dsql.${AWS::Region}.on.aws'
-      Description: !Sub 'Database hostname for ${Environment} environment'
-      Tags:
-        Environment: !Ref Environment
-        Service: Splity
-        Category: Database
-
-  # Parameter Store - AWS Configuration
-  ParameterAwsBucketName:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub '/splity/${Environment}/aws/bucket/name'
-      Type: String
-      Value: !Ref S3BucketName
-      Description: !Sub 'AWS S3 bucket name for ${Environment} environment'
-      Tags:
-        Environment: !Ref Environment
-        Service: Splity
-        Category: AWS
-
-  ParameterAwsBucketRegion:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub '/splity/${Environment}/aws/bucket/region'
-      Type: String
-      Value: !Ref S3BucketRegion
-      Description: !Sub 'AWS S3 bucket region for ${Environment} environment'
-      Tags:
-        Environment: !Ref Environment
-        Service: Splity
-        Category: AWS
-
-  ParameterAwsRegion:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub '/splity/${Environment}/aws/region'
-      Type: String
-      Value: !Ref AWS::Region
-      Description: !Sub 'AWS region for ${Environment} environment'
-      Tags:
-        Environment: !Ref Environment
-        Service: Splity
-        Category: AWS
-
-  # Parameter Store - Azure Configuration
-  ParameterAzureDocumentIntelligenceEndpoint:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub '/splity/${Environment}/azure/document-intelligence/endpoint'
-      Type: String
-      Value: !Ref DocumentIntelligenceEndpoint
-      Description: !Sub 'Azure Document Intelligence endpoint for ${Environment} environment'
-      Tags:
-        Environment: !Ref Environment
-        Service: Splity
-        Category: Azure
-
-  ParameterAzureDocumentIntelligenceApiKey:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub '/splity/${Environment}/azure/document-intelligence/api-key'
-      Type: String
-      Value: !Ref DocumentIntelligenceApiKey
-      Description: !Sub 'Azure Document Intelligence API key for ${Environment} environment (encrypted)'
-      Tags:
-        Environment: !Ref Environment
-        Service: Splity
-        Category: Azure
-
-  # Parameter Store - Cognito Configuration
-  ParameterCognitoUserPoolId:
-    Type: AWS::SSM::Parameter
-    Condition: HasCognitoUserPool
-    Properties:
-      Name: !Sub '/splity/${Environment}/cognito/user-pool-id'
-      Type: String
-      Value: !Ref CognitoUserPoolId
-      Description: !Sub 'Cognito User Pool ID for ${Environment} environment'
-      Tags:
-        Environment: !Ref Environment
-        Service: Splity
-        Category: Authentication
-
-  ParameterCognitoClientId:
-    Type: AWS::SSM::Parameter
-    Condition: HasCognitoClient
-    Properties:
-      Name: !Sub '/splity/${Environment}/cognito/client-id'
-      Type: String
-      Value: !Ref CognitoClientId
-      Description: !Sub 'Cognito Client ID for ${Environment} environment'
-      Tags:
-        Environment: !Ref Environment
-        Service: Splity
-        Category: Authentication
-
-  # Parameter Store - Application Configuration
-  ParameterApplicationAllowedOrigins:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub '/splity/${Environment}/application/allowed-origins'
-      Type: String
-      Value: !Ref AllowedOrigins
-      Description: !Sub 'CORS allowed origins for ${Environment} environment'
-      Tags:
-        Environment: !Ref Environment
-        Service: Splity
-        Category: Application
+  # NOTE: Parameter Store configuration is handled by scripts/setup-parameter-store.sh
+  # This avoids conflicts and provides better interactive configuration for sensitive data
 
   # Aurora DSQL Cluster
   SplityDsqlCluster:
