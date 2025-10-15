@@ -224,44 +224,20 @@ Infrastructure diagram available at `docs/infra.dot`.
 - Parameter Store configured (see Configuration Management section)
 - Ensure your function builds successfully: `dotnet build`
 
-### Deployment Steps with Parameter Store
+### Cloud Formation Deployment Steps with Parameter Store
 
 1. **Set up Parameter Store** (one-time per environment):
    ```bash
    ./scripts/setup-parameter-store.sh dev eu-west-2
    ```
 
-2. **Deploy CloudFormation stack** (includes Parameter Store resources):
+2. **Full deployment with database initialization:
    ```bash
-   aws cloudformation deploy \
-     --template-file splity-infrastructure-cf-template.yaml \
-     --stack-name splity-complete-infrastructure-dev \
-     --parameter-overrides Environment=dev \
-     --capabilities CAPABILITY_NAMED_IAM \
-     --region eu-west-2
+   ./scripts/deploy-and-initialize-db.sh dev eu-west-2
    ```
 
-3. **Deploy All Lambda Code After Infrastructure:**
-    After deploying the infrastructure, update all Lambda functions with actual .NET code:
-    ```bash
-    # Party Functions
-    cd Splity.Party.Create/src/Splity.Party.Create && dotnet lambda deploy-function --function-name SplityCreateParty-dev --region eu-west-2
-    cd ../../../Splity.Party.Get/src/Splity.Party.Get && dotnet lambda deploy-function --function-name SplityGetParty-dev --region eu-west-2
-    cd ../../../Splity.Party.Update/src/Splity.Party.Update && dotnet lambda deploy-function --function-name SplityUpdateParty-dev --region eu-west-2
-    cd ../../../Splity.Party.Delete/src/Splity.Party.Delete && dotnet lambda deploy-function --function-name SplityDeleteParty-dev --region eu-west-2
 
-       # Expense Functions
-    cd ../../../Splity.Expenses.Create/src/Splity.Expenses.Create && dotnet lambda deploy-function --function-name SplityCreateExpenses-dev --region eu-west-2
-    cd ../../../Splity.Expenses.Delete/src/Splity.Expenses.Delete && dotnet lambda deploy-function --function-name SplityDeleteExpenses-dev --region eu-west-2
-    cd ../../../Splity.Expenses.Extract/src/Splity.Expenses.Extract && dotnet lambda deploy-function --function-name SplityExtractExpenses-dev --region eu-west-2
-
-       # User Functions
-    cd ../../../Splity.User.Create/src/Splity.User.Create && dotnet lambda deploy-function --function-name SplityCreateUser-dev --region eu-west-2
-    cd ../../../Splity.User.Get/src/Splity.User.Get && dotnet lambda deploy-function --function-name SplityGetUser-dev --region eu-west-2
-    cd ../../../Splity.User.Update/src/Splity.User.Update && dotnet lambda deploy-function --function-name SplityUpdateUser-dev --region eu-west-2
-    ```
-
-5. **Verify deployment**:
+3. **Verify deployment**:
    ```bash
    # List your Lambda functions to confirm deployment
    aws lambda list-functions --query 'Functions[?starts_with(FunctionName, `Splity`)].FunctionName'
