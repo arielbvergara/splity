@@ -231,7 +231,7 @@ Infrastructure diagram available at `docs/infra.dot`.
    ./scripts/setup-parameter-store.sh dev eu-west-2
    ```
 
-2. **Full deployment with database initialization:
+2. **Full deployment with database initialization**:
    ```bash
    ./scripts/deploy-and-initialize-db.sh dev eu-west-2
    ```
