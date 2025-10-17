@@ -253,7 +253,7 @@ public class UserRepository(IDbConnection connection) : IUserRepository
                 jsonb_build_object(
                     'ExpenseId', ep.ExpenseId,
                     'UserId', ep.UserId,
-                    'Share', ep.Share
+                    'Quantity', ep.Quantity
                 )
             ), '[]'::jsonb)
             FROM ExpenseParticipants ep
