@@ -19,31 +19,10 @@
 
 set -e  # Exit on any error
 
-# Parse command line arguments
-SKIP_DB=false
-ENVIRONMENT="dev"
-REGION="eu-west-2"
-
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --skip-db)
-      SKIP_DB=true
-      shift
-      ;;
-    *)
-      if [[ -z "$ENVIRONMENT" || "$ENVIRONMENT" == "dev" ]]; then
-        ENVIRONMENT="$1"
-      elif [[ -z "$REGION" || "$REGION" == "eu-west-2" ]]; then
-        REGION="$1"
-      fi
-      shift
-      ;;
-  esac
-done
-
-# Set defaults if not provided
-ENVIRONMENT=${ENVIRONMENT:-dev}
-REGION=${REGION:-eu-west-2}
+# Configuration
+ENVIRONMENT=${1:-dev}
+REGION=${2:-eu-west-2}
+SKIP_DB=${3:-false}
 STACK_NAME="splity-complete-infrastructure-${ENVIRONMENT}"
 
 if [[ "$SKIP_DB" == "true" ]]; then
@@ -52,16 +31,16 @@ else
     echo "🚀 Starting Splity deployment and database initialization for environment: ${ENVIRONMENT}"
 fi
 
-# Step 1: Deploy CloudFormation stack
-echo "📦 Deploying CloudFormation infrastructure..."
-aws cloudformation deploy \
-  --template-file splity-infrastructure-cf-template.yaml \
-  --stack-name ${STACK_NAME} \
-  --parameter-overrides Environment=${ENVIRONMENT} \
-  --capabilities CAPABILITY_NAMED_IAM \
-  --region ${REGION}
-
 if [[ "$SKIP_DB" != "true" ]]; then
+    # Step 1: Deploy CloudFormation stack
+    echo "📦 Deploying CloudFormation infrastructure..."
+    aws cloudformation deploy \
+      --template-file splity-infrastructure-cf-template.yaml \
+      --stack-name ${STACK_NAME} \
+      --parameter-overrides Environment=${ENVIRONMENT} \
+      --capabilities CAPABILITY_NAMED_IAM \
+      --region ${REGION}
+
     # Step 2: Deploy Database Initialize Lambda
     echo "🏗️  Deploying Database Initialize Lambda function..."
     cd Splity.Database.Initialize/src/Splity.Database.Initialize
@@ -94,7 +73,6 @@ else
 fi
 
 # Step 4: Deploy all other Lambda functions
-cd ../../../
 echo "🔧 Deploying all Lambda functions..."
 
 # Deploy functions in parallel for faster deployment
