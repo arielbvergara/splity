@@ -1,13 +1,9 @@
 using System.Data;
 using System.Net;
 using System.Text.Json;
-using Amazon;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
-using Splity.Shared.Authentication;
-using Splity.Shared.Authentication.Services.Interfaces;
 using Splity.Shared.Common;
-using Splity.Shared.Database;
 using Splity.Shared.Database.Models.Commands;
 using Splity.Shared.Database.Repositories;
 using Splity.Shared.Database.Repositories.Interfaces;
@@ -17,7 +13,8 @@ using Splity.Shared.Database.Repositories.Interfaces;
 
 namespace Splity.User.Create;
 
-public class Function(IDbConnection connection, IUserRepository? userRepository = null, IAuthenticationService? authService = null) : BaseAuthenticatedLambdaFunction(connection, authService)
+// Note: inherits from BaseLambdaFunction as this functionality doesn't require authentication
+public class Function(IDbConnection connection, IUserRepository? userRepository = null) : BaseLambdaFunction
 {
     private readonly IUserRepository _userRepository = userRepository ?? new UserRepository(connection);
 
