@@ -17,11 +17,11 @@ using Splity.Shared.Database.Repositories.Interfaces;
 
 namespace Splity.User.Create;
 
-public class Function(IDbConnection connection, IUserRepository? userRepository = null) : BaseLambdaFunction
+public class Function(IDbConnection connection, IUserRepository? userRepository = null, IAuthenticationService? authService = null) : BaseAuthenticatedLambdaFunction(connection, authService)
 {
     private readonly IUserRepository _userRepository = userRepository ?? new UserRepository(connection);
 
-    public Function() : this(CreateDatabaseConnection(), null)
+    public Function() : this(CreateDatabaseConnection())
     {
     }
 

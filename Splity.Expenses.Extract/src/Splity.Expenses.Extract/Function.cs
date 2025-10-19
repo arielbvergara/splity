@@ -7,6 +7,8 @@ using System.Text.Json;
 using Amazon;
 using Amazon.S3;
 using Splity.Shared.AI;
+using Splity.Shared.Authentication;
+using Splity.Shared.Authentication.Services.Interfaces;
 using Splity.Shared.Common;
 using Splity.Shared.Database;
 using Splity.Shared.Database.Models.Commands;
@@ -19,7 +21,7 @@ using Splity.Shared.Storage;
 
 namespace Splity.Expenses.Extract;
 
-public class Function : BaseLambdaFunction
+public class Function : BaseAuthenticatedLambdaFunction
 {
     private readonly IPartyRepository _partyRepository;
     private IS3BucketService _s3BucketService;
@@ -29,7 +31,8 @@ public class Function : BaseLambdaFunction
     public Function(IDbConnection? connection = null,
         IS3BucketService? s3BucketService = null,
         IDocumentIntelligenceService? documentIntelligenceService = null,
-        IPartyRepository? partyRepository = null)
+        IPartyRepository? partyRepository = null,
+        IAuthenticationService? authService = null) : base(connection, authService)
     {
         var dbConnection = connection ?? CreateDatabaseConnection();
         _partyRepository = partyRepository ?? new PartyRepository(dbConnection);
@@ -47,7 +50,7 @@ public class Function : BaseLambdaFunction
         }
     }
 
-    public Function() : this(null, null, null, null)
+    public Function() : base(null)
     {
     }
 

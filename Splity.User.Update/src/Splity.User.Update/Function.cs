@@ -3,7 +3,8 @@ using System.Net;
 using System.Text.Json;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
-using Splity.Shared.Common;
+using Splity.Shared.Authentication;
+using Splity.Shared.Authentication.Services.Interfaces;
 using Splity.Shared.Database.Models.Commands;
 using Splity.Shared.Database.Repositories;
 using Splity.Shared.Database.Repositories.Interfaces;
@@ -13,11 +14,11 @@ using Splity.Shared.Database.Repositories.Interfaces;
 
 namespace Splity.User.Update;
 
-public class Function(IDbConnection connection, IUserRepository? userRepository = null) : BaseLambdaFunction
+public class Function(IDbConnection connection, IUserRepository? userRepository = null, IAuthenticationService? authService = null) : BaseAuthenticatedLambdaFunction(connection, authService)
 {
     private readonly IUserRepository _userRepository = userRepository ?? new UserRepository(connection);
 
-    public Function() : this(CreateDatabaseConnection(), null)
+    public Function() : this(CreateDatabaseConnection())
     {
     }
 

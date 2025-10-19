@@ -16,6 +16,7 @@
     <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" Version="2.4.4" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Splity.Shared.Authentication\Splity.Shared.Authentication.csproj" />
     <ProjectReference Include="..\..\..\Splity.Shared.Database\Splity.Shared.Database.csproj" />
     <ProjectReference Include="..\..\..\Splity.Shared.Common\Splity.Shared.Common.csproj" />
   </ItemGroup>

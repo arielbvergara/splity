@@ -20,6 +20,7 @@
     </ItemGroup>
     <ItemGroup>
       <ProjectReference Include="..\..\..\Splity.Shared.AI\Splity.Shared.AI.csproj" />
+      <ProjectReference Include="..\..\..\Splity.Shared.Authentication\Splity.Shared.Authentication.csproj" />
       <ProjectReference Include="..\..\..\Splity.Shared.Common\Splity.Shared.Common.csproj" />
       <ProjectReference Include="..\..\..\Splity.Shared.Database\Splity.Shared.Database.csproj" />
       <ProjectReference Include="..\..\..\Splity.Shared.Storage\Splity.Shared.Storage.csproj" />

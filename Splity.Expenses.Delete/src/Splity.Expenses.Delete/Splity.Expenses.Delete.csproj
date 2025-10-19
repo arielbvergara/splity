@@ -18,6 +18,7 @@
         <PackageReference Include="Npgsql" Version="9.0.3" />
     </ItemGroup>
     <ItemGroup>
+      <ProjectReference Include="..\..\..\Splity.Shared.Authentication\Splity.Shared.Authentication.csproj" />
       <ProjectReference Include="..\..\..\Splity.Shared.Common\Splity.Shared.Common.csproj" />
       <ProjectReference Include="..\..\..\Splity.Shared.Database\Splity.Shared.Database.csproj" />
     </ItemGroup>

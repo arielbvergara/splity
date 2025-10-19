@@ -4,6 +4,8 @@ using System.Text.Json;
 using Amazon;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
+using Splity.Shared.Authentication;
+using Splity.Shared.Authentication.Services.Interfaces;
 using Splity.Shared.Common;
 using Splity.Shared.Database;
 using Splity.Shared.Database.Repositories;
@@ -14,7 +16,7 @@ using Splity.Shared.Database.Repositories.Interfaces;
 
 namespace Splity.Party.Get;
 
-public class Function(IDbConnection connection, IPartyRepository? partyRepository = null) : BaseLambdaFunction
+public class Function(IDbConnection connection, IPartyRepository? partyRepository = null, IAuthenticationService? authService = null) : BaseAuthenticatedLambdaFunction(connection, authService)
 {
     private readonly IPartyRepository _partyRepository = partyRepository ?? new PartyRepository(connection);
 

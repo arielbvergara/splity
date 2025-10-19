@@ -49,7 +49,7 @@ public class FunctionTests
         var mockExpenseRepository = new Mock<IExpenseRepository>();
 
         // Act
-        var function = new Function(mockConnection.Object, mockPartyRepository.Object, mockExpenseRepository.Object);
+        var function = new Function(mockConnection.Object, mockPartyRepository.Object);
 
         // Assert
         function.Should().NotBeNull();
@@ -92,7 +92,7 @@ public class FunctionTests
         apiRequest.RequestContext.Http = new();
         apiRequest.RequestContext.Http.Method = "DELETE";
 
-        var function = new Function(mockConnection.Object, mockPartyRepository.Object, mockExpenseRepository.Object);
+        var function = new Function(mockConnection.Object, mockPartyRepository.Object);
 
         // Act
         var res = await function.FunctionHandler(apiRequest, mockContext.Object);
@@ -126,7 +126,7 @@ public class FunctionTests
         apiRequest.RequestContext.Http = new();
         apiRequest.RequestContext.Http.Method = "OPTIONS";
 
-        var function = new Function(mockConnection.Object, mockPartyRepository.Object, mockExpenseRepository.Object);
+        var function = new Function(mockConnection.Object, mockPartyRepository.Object);
 
         // Act
         var response = await function.FunctionHandler(apiRequest, mockContext.Object);
@@ -156,7 +156,7 @@ public class FunctionTests
         apiRequest.RequestContext.Http = new();
         apiRequest.RequestContext.Http.Method = "GET";
 
-        var function = new Function(mockConnection.Object, mockPartyRepository.Object, mockExpenseRepository.Object);
+        var function = new Function(mockConnection.Object, mockPartyRepository.Object);
 
         // Act
         var response = await function.FunctionHandler(apiRequest, mockContext.Object);
@@ -187,7 +187,7 @@ public class FunctionTests
         apiRequest.RequestContext.Http = new();
         apiRequest.RequestContext.Http.Method = "DELETE";
 
-        var function = new Function(mockConnection.Object, mockPartyRepository.Object, mockExpenseRepository.Object);
+        var function = new Function(mockConnection.Object, mockPartyRepository.Object);
 
         // Act
         var response = await function.FunctionHandler(apiRequest, mockContext.Object);
@@ -223,7 +223,7 @@ public class FunctionTests
         apiRequest.RequestContext.Http = new();
         apiRequest.RequestContext.Http.Method = "DELETE";
 
-        var function = new Function(mockConnection.Object, mockPartyRepository.Object, mockExpenseRepository.Object);
+        var function = new Function(mockConnection.Object, mockPartyRepository.Object);
 
         // Act
         var response = await function.FunctionHandler(apiRequest, mockContext.Object);
@@ -259,7 +259,7 @@ public class FunctionTests
         apiRequest.RequestContext.Http = new();
         apiRequest.RequestContext.Http.Method = "DELETE";
 
-        var function = new Function(mockConnection.Object, mockPartyRepository.Object, mockExpenseRepository.Object);
+        var function = new Function(mockConnection.Object, mockPartyRepository.Object);
 
         // Act
         var response = await function.FunctionHandler(apiRequest, mockContext.Object);
@@ -300,7 +300,7 @@ public class FunctionTests
         apiRequest.RequestContext.Http = new();
         apiRequest.RequestContext.Http.Method = "DELETE";
 
-        var function = new Function(mockConnection.Object, mockPartyRepository.Object, mockExpenseRepository.Object);
+        var function = new Function(mockConnection.Object, mockPartyRepository.Object);
 
         // Act
         var response = await function.FunctionHandler(apiRequest, mockContext.Object);
@@ -344,7 +344,7 @@ public class FunctionTests
         apiRequest.RequestContext.Http = new();
         apiRequest.RequestContext.Http.Method = "DELETE";
 
-        var function = new Function(mockConnection.Object, mockPartyRepository.Object, mockExpenseRepository.Object);
+        var function = new Function(mockConnection.Object, mockPartyRepository.Object);
 
         // Act
         var response = await function.FunctionHandler(apiRequest, mockContext.Object);

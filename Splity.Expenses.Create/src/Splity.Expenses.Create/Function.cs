@@ -2,10 +2,9 @@ using System.Data;
 using System.Net;
 using System.Text.Json;
 using Amazon.Lambda.Core;
-using Amazon;
 using Amazon.Lambda.APIGatewayEvents;
-using Splity.Shared.Common;
-using Splity.Shared.Database;
+using Splity.Shared.Authentication;
+using Splity.Shared.Authentication.Services.Interfaces;
 using Splity.Shared.Database.Models.Commands;
 using Splity.Shared.Database.Repositories;
 using Splity.Shared.Database.Repositories.Interfaces;
@@ -14,11 +13,11 @@ using Splity.Shared.Database.Repositories.Interfaces;
 
 namespace Splity.Expenses.Create;
 
-public class Function(IDbConnection connection, IExpenseRepository? expenseRepository = null) : BaseLambdaFunction
+public class Function(IDbConnection connection, IExpenseRepository? expenseRepository = null, IAuthenticationService? authService = null) : BaseAuthenticatedLambdaFunction(connection, authService)
 {
     private readonly IExpenseRepository _expenseRepository = expenseRepository ?? new ExpenseRepository(connection);
 
-    public Function() : this(CreateDatabaseConnection(), null)
+    public Function() : this(CreateDatabaseConnection())
     {
     }
 

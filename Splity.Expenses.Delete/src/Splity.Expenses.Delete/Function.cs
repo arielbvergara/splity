@@ -4,6 +4,8 @@ using System.Text.Json;
 using Amazon.Lambda.Core;
 using Amazon;
 using Amazon.Lambda.APIGatewayEvents;
+using Splity.Shared.Authentication;
+using Splity.Shared.Authentication.Services.Interfaces;
 using Splity.Shared.Common;
 using Splity.Shared.Database;
 using Splity.Shared.Database.Models.Commands;
@@ -17,7 +19,7 @@ namespace Splity.Expenses.Delete;
 
 public class Function(
     IDbConnection connection,
-    IExpenseRepository? expenseRepository = null) : BaseLambdaFunction
+    IExpenseRepository? expenseRepository = null, IAuthenticationService? authService = null) : BaseAuthenticatedLambdaFunction(connection, authService)
 {
     private readonly IExpenseRepository _expenseRepository = expenseRepository ?? new ExpenseRepository(connection);
 
