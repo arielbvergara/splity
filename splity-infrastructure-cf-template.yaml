@@ -5,13 +5,13 @@ Parameters:
   Environment:
     Type: String
     Default: dev
-    AllowedValues: [dev, staging, prod]
+    AllowedValues: [dev, staging, prod, acceptance]
     Description: Environment name
     
   ClusterHostname:
     Type: String
-    Default: 2iabunf7mwjh7ap73ncrsrxhpy.dsql.eu-west-2.on.aws
-    Description: PostgreSQL cluster hostname
+    Default: ""
+    Description: PostgreSQL cluster hostname (will be automatically set by DSQL cluster if empty)
     
   ClusterUsername:
     Type: String
@@ -25,12 +25,12 @@ Parameters:
     
   S3BucketName:
     Type: String
-    Default: split-app-v1
+    Default: split-app-v1 # TODO: Add S3 bucket to cloud formation and make it dynamic
     Description: S3 bucket for receipt storage
     
   S3BucketRegion:
     Type: String
-    Default: eu-central-1
+    Default: eu-central-1 # TODO: Add S3 bucket to cloud formation and make it dynamic
     Description: S3 bucket region
     
   AllowedOrigins:
@@ -48,8 +48,46 @@ Parameters:
     Default: ""
     NoEcho: true
     Description: Azure Document Intelligence API key (sensitive parameter)
+    
+  DsqlClusterDeletionProtection:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: Enable deletion protection for Aurora DSQL cluster
+    
+  CognitoUserPoolId:
+    Type: String
+    Default: ""
+    Description: Cognito User Pool ID for authentication
+    
+  CognitoClientId:
+    Type: String
+    Default: ""
+    Description: Cognito User Pool Client ID for authentication
+
+Conditions:
+  HasCognitoUserPool: !Not [!Equals [!Ref CognitoUserPoolId, ""]]
+  HasCognitoClient: !Not [!Equals [!Ref CognitoClientId, ""]]
 
 Resources:
+  # NOTE: Parameter Store configuration is handled by scripts/setup-parameter-store.sh
+  # This avoids conflicts and provides better interactive configuration for sensitive data
+
+  # Aurora DSQL Cluster
+  SplityDsqlCluster:
+    Type: AWS::DSQL::Cluster
+    Properties:
+      DeletionProtectionEnabled: !Ref DsqlClusterDeletionProtection
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: Splity
+        - Key: Entity
+          Value: Database
+        - Key: Name
+          Value: !Sub 'splity-dsql-cluster-${Environment}'
+
   # IAM Role for Lambda Functions
   SplityPartyLambdaRole:
     Type: AWS::IAM::Role
@@ -69,31 +107,21 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              - Sid: DsqlAllPermissions
+              - Sid: DsqlClusterPermissions
                 Effect: Allow
                 Action:
-                  - dsql:CreateCluster
                   - dsql:GetCluster
                   - dsql:UpdateCluster
-                  - dsql:DeleteCluster
-                  - dsql:ListClusters
                   - dsql:TagResource
                   - dsql:UntagResource
                   - dsql:ListTagsForResource
                   - dsql:DbConnectAdmin
                   - dsql:DbConnect
-                  - dsql:PutMultiRegionProperties
-                  - dsql:PutWitnessRegion
-                  - dsql:AddPeerCluster
-                  - dsql:RemovePeerCluster
-                  - dsql:GetVpcEndpointServiceName
-                  - dsql:StartBackupJob
-                  - dsql:GetBackupJob
-                  - dsql:StopBackupJob
-                  - dsql:StartRestoreJob
-                  - dsql:GetRestoreJob
-                  - dsql:StopRestoreJob
-                  - dsql:InjectError
+                Resource: !GetAtt SplityDsqlCluster.ResourceArn
+              - Sid: DsqlGeneralPermissions
+                Effect: Allow
+                Action:
+                  - dsql:ListClusters
                 Resource: '*'
               - Sid: DsqlConsolePermissions
                 Effect: Allow
@@ -128,14 +156,46 @@ Resources:
                 Condition:
                   StringEquals:
                     iam:AWSServiceName: dsql.amazonaws.com
+              - Sid: S3BucketPermissions
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub 'arn:aws:s3:::${S3BucketName}'
+                  - !Sub 'arn:aws:s3:::${S3BucketName}/*'
+              - Sid: ParameterStorePermissions
+                Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:GetParametersByPath
+                Resource:
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/splity/${Environment}/*'
+              - Sid: KMSParameterStorePermissions
+                Effect: Allow
+                Action:
+                  - kms:Decrypt
+                Resource:
+                  - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/alias/aws/ssm'
+                Condition:
+                  StringEquals:
+                    kms:ViaService:
+                      - !Sub 'ssm.${AWS::Region}.amazonaws.com'
 
   # Lambda Functions (using Node.js placeholders initially)
+  # NOTE: Using nodejs18.x runtime with index.handler because dotnet8 runtime
+  # does not support inline ZipFile code. The placeholder JavaScript code allows
+  # CloudFormation to create the functions, then actual .NET code is deployed
+  # later using 'dotnet lambda deploy-function' commands.
   SplityCreatePartyFunction:
     Type: AWS::Lambda::Function
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityCreateParty-${Environment}'
-      Runtime: nodejs20.x
+      Runtime: nodejs18.x
       Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
@@ -159,11 +219,14 @@ Resources:
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
-          CLUSTER_HOSTNAME: !Ref ClusterHostname
+          CLUSTER_HOSTNAME: !Sub '${SplityDsqlCluster}.dsql.${AWS::Region}.on.aws'
           CLUSTER_USERNAME: !Ref ClusterUsername
+          DSQL_CLUSTER_ARN: !GetAtt SplityDsqlCluster.ResourceArn
           AWS_BUCKET_NAME: !Ref S3BucketName
           AWS_BUCKET_REGION: !Ref S3BucketRegion
           ALLOWED_ORIGINS: !Ref AllowedOrigins
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
+          COGNITO_CLIENT_ID: !Ref CognitoClientId
       Tags:
         - Key: Environment
           Value: !Ref Environment
@@ -177,7 +240,7 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityGetParty-${Environment}'
-      Runtime: nodejs20.x
+      Runtime: nodejs18.x
       Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
@@ -201,8 +264,9 @@ Resources:
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
-          CLUSTER_HOSTNAME: !Ref ClusterHostname
+          CLUSTER_HOSTNAME: !Sub '${SplityDsqlCluster}.dsql.${AWS::Region}.on.aws'
           CLUSTER_USERNAME: !Ref ClusterUsername
+          DSQL_CLUSTER_ARN: !GetAtt SplityDsqlCluster.ResourceArn
           AWS_BUCKET_NAME: !Ref S3BucketName
           AWS_BUCKET_REGION: !Ref S3BucketRegion
           ALLOWED_ORIGINS: !Ref AllowedOrigins
@@ -219,7 +283,7 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityUpdateParty-${Environment}'
-      Runtime: nodejs20.x
+      Runtime: nodejs18.x
       Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
@@ -243,8 +307,9 @@ Resources:
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
-          CLUSTER_HOSTNAME: !Ref ClusterHostname
+          CLUSTER_HOSTNAME: !Sub '${SplityDsqlCluster}.dsql.${AWS::Region}.on.aws'
           CLUSTER_USERNAME: !Ref ClusterUsername
+          DSQL_CLUSTER_ARN: !GetAtt SplityDsqlCluster.ResourceArn
           AWS_BUCKET_NAME: !Ref S3BucketName
           AWS_BUCKET_REGION: !Ref S3BucketRegion
           ALLOWED_ORIGINS: !Ref AllowedOrigins
@@ -261,7 +326,7 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityDeleteParty-${Environment}'
-      Runtime: nodejs20.x
+      Runtime: nodejs18.x
       Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
@@ -285,8 +350,9 @@ Resources:
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
-          CLUSTER_HOSTNAME: !Ref ClusterHostname
+          CLUSTER_HOSTNAME: !Sub '${SplityDsqlCluster}.dsql.${AWS::Region}.on.aws'
           CLUSTER_USERNAME: !Ref ClusterUsername
+          DSQL_CLUSTER_ARN: !GetAtt SplityDsqlCluster.ResourceArn
           AWS_BUCKET_NAME: !Ref S3BucketName
           AWS_BUCKET_REGION: !Ref S3BucketRegion
           ALLOWED_ORIGINS: !Ref AllowedOrigins
@@ -304,7 +370,7 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityCreateExpenses-${Environment}'
-      Runtime: nodejs20.x
+      Runtime: nodejs18.x
       Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
@@ -328,8 +394,9 @@ Resources:
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
-          CLUSTER_HOSTNAME: !Ref ClusterHostname
+          CLUSTER_HOSTNAME: !Sub '${SplityDsqlCluster}.dsql.${AWS::Region}.on.aws'
           CLUSTER_USERNAME: !Ref ClusterUsername
+          DSQL_CLUSTER_ARN: !GetAtt SplityDsqlCluster.ResourceArn
           AWS_BUCKET_NAME: !Ref S3BucketName
           AWS_BUCKET_REGION: !Ref S3BucketRegion
           ALLOWED_ORIGINS: !Ref AllowedOrigins
@@ -346,7 +413,7 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityDeleteExpenses-${Environment}'
-      Runtime: nodejs20.x
+      Runtime: nodejs18.x
       Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
@@ -370,8 +437,9 @@ Resources:
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
-          CLUSTER_HOSTNAME: !Ref ClusterHostname
+          CLUSTER_HOSTNAME: !Sub '${SplityDsqlCluster}.dsql.${AWS::Region}.on.aws'
           CLUSTER_USERNAME: !Ref ClusterUsername
+          DSQL_CLUSTER_ARN: !GetAtt SplityDsqlCluster.ResourceArn
           AWS_BUCKET_NAME: !Ref S3BucketName
           AWS_BUCKET_REGION: !Ref S3BucketRegion
           ALLOWED_ORIGINS: !Ref AllowedOrigins
@@ -388,7 +456,7 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityExtractExpenses-${Environment}'
-      Runtime: nodejs20.x
+      Runtime: nodejs18.x
       Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
@@ -412,8 +480,9 @@ Resources:
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
-          CLUSTER_HOSTNAME: !Ref ClusterHostname
+          CLUSTER_HOSTNAME: !Sub '${SplityDsqlCluster}.dsql.${AWS::Region}.on.aws'
           CLUSTER_USERNAME: !Ref ClusterUsername
+          DSQL_CLUSTER_ARN: !GetAtt SplityDsqlCluster.ResourceArn
           AWS_BUCKET_NAME: !Ref S3BucketName
           AWS_BUCKET_REGION: !Ref S3BucketRegion
           ALLOWED_ORIGINS: !Ref AllowedOrigins
@@ -433,7 +502,7 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityCreateUser-${Environment}'
-      Runtime: nodejs20.x
+      Runtime: nodejs18.x
       Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
@@ -457,8 +526,9 @@ Resources:
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
-          CLUSTER_HOSTNAME: !Ref ClusterHostname
+          CLUSTER_HOSTNAME: !Sub '${SplityDsqlCluster}.dsql.${AWS::Region}.on.aws'
           CLUSTER_USERNAME: !Ref ClusterUsername
+          DSQL_CLUSTER_ARN: !GetAtt SplityDsqlCluster.ResourceArn
           AWS_BUCKET_NAME: !Ref S3BucketName
           AWS_BUCKET_REGION: !Ref S3BucketRegion
           ALLOWED_ORIGINS: !Ref AllowedOrigins
@@ -475,7 +545,7 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityGetUser-${Environment}'
-      Runtime: nodejs20.x
+      Runtime: nodejs18.x
       Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
@@ -499,8 +569,9 @@ Resources:
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
-          CLUSTER_HOSTNAME: !Ref ClusterHostname
+          CLUSTER_HOSTNAME: !Sub '${SplityDsqlCluster}.dsql.${AWS::Region}.on.aws'
           CLUSTER_USERNAME: !Ref ClusterUsername
+          DSQL_CLUSTER_ARN: !GetAtt SplityDsqlCluster.ResourceArn
           AWS_BUCKET_NAME: !Ref S3BucketName
           AWS_BUCKET_REGION: !Ref S3BucketRegion
           ALLOWED_ORIGINS: !Ref AllowedOrigins
@@ -517,7 +588,7 @@ Resources:
     DependsOn: SplityPartyLambdaRole
     Properties:
       FunctionName: !Sub 'SplityUpdateUser-${Environment}'
-      Runtime: nodejs20.x
+      Runtime: nodejs18.x
       Handler: index.handler
       Role: !GetAtt SplityPartyLambdaRole.Arn
       Code:
@@ -541,8 +612,9 @@ Resources:
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
-          CLUSTER_HOSTNAME: !Ref ClusterHostname
+          CLUSTER_HOSTNAME: !Sub '${SplityDsqlCluster}.dsql.${AWS::Region}.on.aws'
           CLUSTER_USERNAME: !Ref ClusterUsername
+          DSQL_CLUSTER_ARN: !GetAtt SplityDsqlCluster.ResourceArn
           AWS_BUCKET_NAME: !Ref S3BucketName
           AWS_BUCKET_REGION: !Ref S3BucketRegion
           ALLOWED_ORIGINS: !Ref AllowedOrigins
@@ -991,3 +1063,22 @@ Outputs:
   UpdateUserEndpoint:
     Description: 'PUT endpoint to update a user'
     Value: !Sub 'https://${SplityPartyApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/users/{id}'
+
+  # Aurora DSQL Cluster Outputs
+  DsqlClusterArn:
+    Description: 'Aurora DSQL Cluster ARN'
+    Value: !GetAtt SplityDsqlCluster.ResourceArn
+    Export:
+      Name: !Sub '${AWS::StackName}-DsqlClusterArn'
+      
+  DsqlClusterEndpoint:
+    Description: 'Aurora DSQL Cluster Endpoint'
+    Value: !Sub '${SplityDsqlCluster}.dsql.${AWS::Region}.on.aws'
+    Export:
+      Name: !Sub '${AWS::StackName}-DsqlClusterEndpoint'
+      
+  DsqlClusterIdentifier:
+    Description: 'Aurora DSQL Cluster Identifier'
+    Value: !Ref SplityDsqlCluster
+    Export:
+      Name: !Sub '${AWS::StackName}-DsqlClusterIdentifier'

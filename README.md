@@ -1,8 +1,37 @@
 # Splity: A Serverless Expense Sharing Application with Receipt Analysis
 
-Splity is a modern serverless application that simplifies expense sharing and management through automated receipt processing and intelligent expense tracking. Built on AWS Lambda with .NET 8, it provides a robust platform for creating and managing shared expenses with automated receipt analysis capabilities.
+Splity is a serverless expense sharing application built with .NET 8 and AWS Lambda that automates receipt processing through Azure Document Intelligence. It uses a microservices architecture with separate Lambda functions for different operations and PostgreSQL for data persistence.
 
-The application leverages Azure's Document Intelligence for receipt analysis and AWS services for serverless computing and storage. It provides comprehensive expense management features including party creation, expense tracking, and automated receipt data extraction. The system uses PostgreSQL for data persistence and implements a microservices architecture through AWS Lambda functions.
+The application provides comprehensive expense management features including party creation, expense tracking, and automated receipt data extraction through intelligent OCR capabilities. Built on AWS services for scalability and Azure's Document Intelligence for advanced receipt analysis.
+
+## Architecture Overview
+
+### Core Components
+
+- **Lambda Functions**: Independent microservices for each operation (Party management, Expense management, User management)
+- **Shared Libraries**: Common functionality across all Lambda functions
+  - `Splity.Shared.Database`: Data models, repositories, and PostgreSQL connection handling
+  - `Splity.Shared.AI`: Azure Document Intelligence service integration  
+  - `Splity.Shared.Storage`: S3 bucket operations for receipt image storage
+  - `Splity.Shared.Common`: API Gateway helpers and common utilities
+
+### Data Flow
+
+1. Client uploads receipt through API Gateway
+2. Lambda function stores image in S3 bucket
+3. Azure Document Intelligence extracts receipt data
+4. Processed data stored in PostgreSQL database
+5. Party and expense management through dedicated Lambda functions
+
+```ascii
+[Client] -> [API Gateway] -> [Lambda Functions]
+                                    |
+                                    v
+[S3 Storage] <- [Receipt Upload] -> [Azure Document Intelligence]
+                                    |
+                                    v
+                              [PostgreSQL DB]
+```
 
 ## Repository Structure
 ```
@@ -69,8 +98,27 @@ dotnet build
 
 ### Infrastructure Deployment
 
-#### Deploy Complete Infrastructure
-The application uses a comprehensive CloudFormation template for infrastructure as code. Deploy the entire Splity infrastructure:
+#### Step 1: Configure Parameter Store
+First, set up application configuration using the interactive script:
+
+```bash
+# Set up Parameter Store with interactive configuration
+./scripts/setup-parameter-store.sh dev eu-west-2
+```
+
+This script will:
+- Create all required Parameter Store parameters
+- Securely store sensitive data (API keys) as encrypted SecureString parameters
+- Handle existing parameters gracefully
+
+**If you encounter Parameter Store conflicts during CloudFormation deployment:**
+```bash
+# The parameters already exist from the setup script, which is expected
+# The CloudFormation template no longer manages Parameter Store to avoid this conflict
+```
+
+#### Step 2: Deploy Infrastructure
+After Parameter Store is configured, deploy the CloudFormation infrastructure:
 
 ```bash
 # Deploy complete Splity infrastructure stack
@@ -82,7 +130,9 @@ aws cloudformation deploy \
   --region eu-west-2
 ```
 
-#### Deploy All Lambda Code
+> **Note**: The CloudFormation template focuses on infrastructure (DSQL cluster, IAM roles, Lambda functions) while Parameter Store configuration is handled separately by the setup script to avoid conflicts and provide better security for sensitive data.
+
+#### Step 3: Deploy Lambda Code
 After infrastructure is deployed, update all Lambda functions with actual .NET code:
 
 ```bash
@@ -193,6 +243,60 @@ Key component interactions:
 5. Party and expense data is managed through dedicated Lambda functions
 6. S3 maintains persistent storage of receipt images
 7. API Gateway provides RESTful interface for all operations
+
+## TODO: Missing Backend Features
+
+The following features are missing from the current backend implementation and need to be added:
+
+### Party Management
+- [ ] `GET /parties` - List all parties for a user
+- [ ] `POST /party/{partyId}/invite` - Invite members to party
+- [ ] `DELETE /party/{partyId}/members/{userId}` - Remove member from party
+- [ ] `GET /party/{partyId}/members` - List party members
+- [ ] Party join functionality via invite codes
+
+### Expense Management
+- [ ] `GET /party/{partyId}/expenses` - Get expenses for a party
+- [ ] `PUT /expenses/{expenseId}` - Update individual expense
+- [ ] `GET /expenses/{expenseId}` - Get individual expense details
+- [ ] Expense splitting algorithms (equal, percentage, custom amounts)
+- [ ] Expense categories and tagging
+
+### Settlement & Payments
+- [ ] `GET /party/{partyId}/settlements` - Calculate who owes whom
+- [ ] `POST /party/{partyId}/settle` - Mark settlements as paid
+- [ ] Payment tracking and history
+- [ ] Settlement optimization algorithms
+
+### User & Authentication
+- [ ] User authentication and session management
+- [ ] `GET /users/{userId}/parties` - Get user's parties
+- [ ] `GET /users/{userId}/expenses` - Get user's expenses
+- [ ] User profile management
+
+### File & Receipt Management
+- [ ] Receipt image storage and retrieval
+- [ ] Receipt data validation and editing
+- [ ] Multiple receipt formats support
+- [ ] Receipt OCR confidence scoring
+
+### Analytics & Reporting
+- [ ] Spending analytics by category
+- [ ] Monthly/yearly expense reports
+- [ ] Party expense summaries
+- [ ] Export functionality (CSV, PDF)
+
+### Notifications & Real-time
+- [ ] Email notifications for new expenses
+- [ ] Real-time updates via WebSocket/SSE
+- [ ] Push notifications for mobile
+- [ ] Expense reminder system
+
+### Data Validation & Business Logic
+- [ ] Expense amount validation
+- [ ] Party member limits
+- [ ] Receipt duplicate detection
+- [ ] Data consistency checks
 
 ## Infrastructure
 

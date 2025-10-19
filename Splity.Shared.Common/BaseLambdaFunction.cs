@@ -3,6 +3,7 @@ using System.Net;
 using System.Text.Json;
 using Amazon;
 using Amazon.Lambda.APIGatewayEvents;
+using Splity.Shared.Common.Configuration;
 using Splity.Shared.Database;
 
 namespace Splity.Shared.Common;
@@ -23,7 +24,31 @@ public abstract class BaseLambdaFunction
     };
 
     /// <summary>
-    /// Creates a database connection using environment variables
+    /// Configuration service instance (lazy-loaded)
+    /// </summary>
+    private static readonly Lazy<ISplityConfigurationService> ConfigurationService = new(() => new SplityConfigurationService());
+
+    /// <summary>
+    /// Get the configuration service instance
+    /// </summary>
+    protected static ISplityConfigurationService Configuration => ConfigurationService.Value;
+
+    /// <summary>
+    /// Creates a database connection using configuration service
+    /// </summary>
+    /// <returns>Database connection</returns>
+    protected static async Task<IDbConnection> CreateDatabaseConnectionAsync()
+    {
+        await Configuration.InitializeAsync();
+        return DsqlConnectionHelper.CreateConnection(
+            Configuration.Database.Username,
+            Configuration.Database.Hostname,
+            RegionEndpoint.EUWest2.SystemName,
+            Configuration.Database.Database);
+    }
+
+    /// <summary>
+    /// Creates a database connection using environment variables (for backward compatibility)
     /// </summary>
     /// <returns>Database connection</returns>
     protected static IDbConnection CreateDatabaseConnection()
@@ -113,7 +138,28 @@ public abstract class BaseLambdaFunction
     }
 
     /// <summary>
-    /// Get CORS headers for cross-origin requests
+    /// Get CORS headers for cross-origin requests (async version using configuration service)
+    /// </summary>
+    /// <param name="allowedMethods">Comma-separated list of allowed HTTP methods</param>
+    /// <returns>Dictionary of CORS headers</returns>
+    protected async Task<Dictionary<string, string>> GetCorsHeadersAsync(string allowedMethods = "GET,POST,PUT,DELETE")
+    {
+        await Configuration.InitializeAsync();
+        return new Dictionary<string, string>
+        {
+            { "Access-Control-Allow-Origin", Configuration.Application.AllowedOrigins },
+            {
+                "Access-Control-Allow-Headers",
+                "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,x-filename"
+            },
+            { "Access-Control-Allow-Methods", allowedMethods },
+            { "Access-Control-Max-Age", "86400" }, // Cache preflight for 24 hours
+            { "Content-Type", "application/json" }
+        };
+    }
+
+    /// <summary>
+    /// Get CORS headers for cross-origin requests (fallback using environment variables)
     /// </summary>
     /// <param name="allowedMethods">Comma-separated list of allowed HTTP methods</param>
     /// <returns>Dictionary of CORS headers</returns>

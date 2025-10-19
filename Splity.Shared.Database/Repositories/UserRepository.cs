@@ -11,7 +11,7 @@ public class UserRepository(IDbConnection connection) : IUserRepository
 {
     public async Task<User?> GetUserByIdAsync(Guid userId)
     {
-        const string sql = "SELECT UserId, Name, Email, CreatedAt FROM Users WHERE UserId = @userId";
+        const string sql = "SELECT UserId, Name, Email, CognitoUserId, CreatedAt FROM Users WHERE UserId = @userId";
         
         await using var command = new NpgsqlCommand(sql, (NpgsqlConnection)connection);
         command.Parameters.AddWithValue("@userId", userId);
@@ -28,13 +28,14 @@ public class UserRepository(IDbConnection connection) : IUserRepository
             UserId = reader.GetGuid("UserId"),
             Name = reader.GetString("Name"),
             Email = reader.GetString("Email"),
+            CognitoUserId = reader.IsDBNull("CognitoUserId") ? null : reader.GetString("CognitoUserId"),
             CreatedAt = reader.IsDBNull("CreatedAt") ? null : reader.GetDateTime("CreatedAt")
         };
     }
 
     public async Task<User?> GetUserByEmailAsync(string email)
     {
-        const string sql = "SELECT UserId, Name, Email, CreatedAt FROM Users WHERE Email = @email";
+        const string sql = "SELECT UserId, Name, Email, CognitoUserId, CreatedAt FROM Users WHERE Email = @email";
         
         await using var command = new NpgsqlCommand(sql, (NpgsqlConnection)connection);
         command.Parameters.AddWithValue("@email", email);
@@ -51,6 +52,31 @@ public class UserRepository(IDbConnection connection) : IUserRepository
             UserId = reader.GetGuid("UserId"),
             Name = reader.GetString("Name"),
             Email = reader.GetString("Email"),
+            CognitoUserId = reader.IsDBNull("CognitoUserId") ? null : reader.GetString("CognitoUserId"),
+            CreatedAt = reader.IsDBNull("CreatedAt") ? null : reader.GetDateTime("CreatedAt")
+        };
+    }
+
+    public async Task<User?> GetUserByCognitoIdAsync(string cognitoUserId)
+    {
+        const string sql = "SELECT UserId, Name, Email, CognitoUserId, CreatedAt FROM Users WHERE CognitoUserId = @cognitoUserId";
+        
+        await using var command = new NpgsqlCommand(sql, (NpgsqlConnection)connection);
+        command.Parameters.AddWithValue("@cognitoUserId", cognitoUserId);
+        
+        await using var reader = await command.ExecuteReaderAsync();
+        
+        if (!await reader.ReadAsync())
+        {
+            return null;
+        }
+        
+        return new User
+        {
+            UserId = reader.GetGuid("UserId"),
+            Name = reader.GetString("Name"),
+            Email = reader.GetString("Email"),
+            CognitoUserId = reader.IsDBNull("CognitoUserId") ? null : reader.GetString("CognitoUserId"),
             CreatedAt = reader.IsDBNull("CreatedAt") ? null : reader.GetDateTime("CreatedAt")
         };
     }
@@ -68,13 +94,14 @@ public class UserRepository(IDbConnection connection) : IUserRepository
         var createdAt = DateTime.UtcNow;
 
         const string sql = @"
-            INSERT INTO Users (UserId, Name, Email, CreatedAt) 
-            VALUES (@userId, @name, @email, @createdAt)";
+            INSERT INTO Users (UserId, Name, Email, CognitoUserId, CreatedAt) 
+            VALUES (@userId, @name, @email, @cognitoUserId, @createdAt)";
 
         await using var command = new NpgsqlCommand(sql, (NpgsqlConnection)connection);
         command.Parameters.AddWithValue("@userId", userId);
         command.Parameters.AddWithValue("@name", request.Name);
         command.Parameters.AddWithValue("@email", request.Email);
+        command.Parameters.AddWithValue("@cognitoUserId", request.CognitoUserId ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("@createdAt", createdAt);
 
         await command.ExecuteNonQueryAsync();
@@ -84,6 +111,7 @@ public class UserRepository(IDbConnection connection) : IUserRepository
             UserId = userId,
             Name = request.Name,
             Email = request.Email,
+            CognitoUserId = request.CognitoUserId,
             CreatedAt = createdAt
         };
     }
@@ -225,7 +253,7 @@ public class UserRepository(IDbConnection connection) : IUserRepository
                 jsonb_build_object(
                     'ExpenseId', ep.ExpenseId,
                     'UserId', ep.UserId,
-                    'Share', ep.Share
+                    'Quantity', ep.Quantity
                 )
             ), '[]'::jsonb)
             FROM ExpenseParticipants ep

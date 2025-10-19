@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Splity - Authentication</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .auth-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .auth-form {
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+        }
+        
+        input[type="email"], input[type="password"], input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        .toggle-link {
+            color: #007bff;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        
+        .error {
+            color: #d32f2f;
+            margin: 10px 0;
+        }
+        
+        .success {
+            color: #2e7d32;
+            margin: 10px 0;
+        }
+        
+        .user-info {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="authContainer" class="auth-container">
+        <h2 id="authTitle">Welcome to Splity</h2>
+        
+        <div id="loginForm" class="auth-form active">
+            <h3>Sign In</h3>
+            <input type="email" id="loginEmail" placeholder="Email" required>
+            <input type="password" id="loginPassword" placeholder="Password" required>
+            <button onclick="signIn()">Sign In</button>
+            <p>Don't have an account? <span class="toggle-link" onclick="showSignUp()">Sign Up</span></p>
+        </div>
+        
+        <div id="signupForm" class="auth-form">
+            <h3>Create Account</h3>
+            <input type="text" id="signupName" placeholder="Full Name" required>
+            <input type="email" id="signupEmail" placeholder="Email" required>
+            <input type="password" id="signupPassword" placeholder="Password" required>
+            <button onclick="signUp()">Create Account</button>
+            <p>Already have an account? <span class="toggle-link" onclick="showSignIn()">Sign In</span></p>
+        </div>
+        
+        <div id="confirmForm" class="auth-form">
+            <h3>Confirm Your Account</h3>
+            <p>We've sent a confirmation code to your email.</p>
+            <input type="text" id="confirmCode" placeholder="Confirmation Code" required>
+            <button onclick="confirmSignUp()">Confirm Account</button>
+        </div>
+        
+        <div id="message"></div>
+    </div>
+    
+    <div id="userInfo" class="user-info" style="display: none;">
+        <h3>Welcome, <span id="userName"></span>!</h3>
+        <p>Email: <span id="userEmail"></span></p>
+        <button onclick="signOut()">Sign Out</button>
+        <button onclick="testAPI()">Test Authenticated API</button>
+        <div id="apiResult"></div>
+    </div>
+
+    <!-- AWS Cognito SDK -->
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1000.0.min.js"></script>
+    <script>
+        // Configuration - Replace these with your actual Cognito details
+        const CONFIG = {
+            region: 'eu-west-2', // Update this to your region
+            userPoolId: 'YOUR_USER_POOL_ID', // Update this
+            clientId: 'YOUR_CLIENT_ID', // Update this
+            apiUrl: 'https://your-api-id.execute-api.eu-west-2.amazonaws.com' // Update this
+        };
+        
+        // Configure AWS
+        AWS.config.region = CONFIG.region;
+        
+        let cognitoUser = null;
+        let currentSession = null;
+        
+        // Initialize Cognito User Pool
+        const poolData = {
+            UserPoolId: CONFIG.userPoolId,
+            ClientId: CONFIG.clientId
+        };
+        
+        const userPool = new AWSCognito.CognitoUserPool(poolData);
+        
+        // Check if user is already signed in
+        window.onload = function() {
+            checkAuthState();
+        };
+        
+        function checkAuthState() {
+            const cognitoUser = userPool.getCurrentUser();
+            
+            if (cognitoUser != null) {
+                cognitoUser.getSession((err, session) => {
+                    if (err) {
+                        console.log(err);
+                        showAuth();
+                        return;
+                    }
+                    
+                    if (session.isValid()) {
+                        currentSession = session;
+                        showUserInfo(cognitoUser);
+                        
+                        // Store tokens in cookies
+                        setAuthCookies(session);
+                    } else {
+                        showAuth();
+                    }
+                });
+            } else {
+                showAuth();
+            }
+        }
+        
+        function showAuth() {
+            document.getElementById('authContainer').style.display = 'block';
+            document.getElementById('userInfo').style.display = 'none';
+        }
+        
+        function showUserInfo(user) {
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('userInfo').style.display = 'block';
+            
+            user.getUserAttributes((err, attributes) => {
+                if (err) {
+                    console.log(err);
+                    return;
+                }
+                
+                const email = attributes.find(attr => attr.Name === 'email')?.Value || '';
+                const name = attributes.find(attr => attr.Name === 'name')?.Value || 
+                           attributes.find(attr => attr.Name === 'given_name')?.Value || 
+                           email;
+                
+                document.getElementById('userName').textContent = name;
+                document.getElementById('userEmail').textContent = email;
+            });
+        }
+        
+        function setAuthCookies(session) {
+            const accessToken = session.getAccessToken().getJwtToken();
+            const idToken = session.getIdToken().getJwtToken();
+            const refreshToken = session.getRefreshToken().getToken();
+            
+            // Set cookies with secure flags for production
+            const cookieOptions = '; Path=/; SameSite=Lax; Max-Age=3600'; // 1 hour
+            
+            document.cookie = `splity_access_token=${accessToken}${cookieOptions}`;
+            document.cookie = `splity_id_token=${idToken}${cookieOptions}`;
+            document.cookie = `splity_refresh_token=${refreshToken}${cookieOptions}`;
+        }
+        
+        function clearAuthCookies() {
+            document.cookie = 'splity_access_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+            document.cookie = 'splity_id_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+            document.cookie = 'splity_refresh_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        }
+        
+        function showMessage(message, isError = false) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.className = isError ? 'error' : 'success';
+        }
+        
+        function showSignUp() {
+            document.getElementById('loginForm').classList.remove('active');
+            document.getElementById('signupForm').classList.add('active');
+            document.getElementById('confirmForm').classList.remove('active');
+        }
+        
+        function showSignIn() {
+            document.getElementById('loginForm').classList.add('active');
+            document.getElementById('signupForm').classList.remove('active');
+            document.getElementById('confirmForm').classList.remove('active');
+        }
+        
+        function showConfirm() {
+            document.getElementById('loginForm').classList.remove('active');
+            document.getElementById('signupForm').classList.remove('active');
+            document.getElementById('confirmForm').classList.add('active');
+        }
+        
+        function signUp() {
+            const name = document.getElementById('signupName').value;
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            
+            if (!name || !email || !password) {
+                showMessage('Please fill in all fields', true);
+                return;
+            }
+            
+            const attributeList = [
+                new AWSCognito.CognitoUserAttribute({
+                    Name: 'email',
+                    Value: email
+                }),
+                new AWSCognito.CognitoUserAttribute({
+                    Name: 'name',
+                    Value: name
+                })
+            ];
+            
+            userPool.signUp(email, password, attributeList, null, (err, result) => {
+                if (err) {
+                    showMessage(err.message || 'Error creating account', true);
+                    return;
+                }
+                
+                cognitoUser = result.user;
+                showMessage('Account created! Please check your email for confirmation code.');
+                showConfirm();
+            });
+        }
+        
+        function confirmSignUp() {
+            const code = document.getElementById('confirmCode').value;
+            
+            if (!code) {
+                showMessage('Please enter the confirmation code', true);
+                return;
+            }
+            
+            cognitoUser.confirmRegistration(code, true, (err, result) => {
+                if (err) {
+                    showMessage(err.message || 'Error confirming account', true);
+                    return;
+                }
+                
+                showMessage('Account confirmed! Please sign in.');
+                showSignIn();
+            });
+        }
+        
+        function signIn() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showMessage('Please enter email and password', true);
+                return;
+            }
+            
+            const authenticationData = {
+                Username: email,
+                Password: password
+            };
+            
+            const authenticationDetails = new AWSCognito.AuthenticationDetails(authenticationData);
+            
+            const userData = {
+                Username: email,
+                Pool: userPool
+            };
+            
+            cognitoUser = new AWSCognito.CognitoUser(userData);
+            
+            cognitoUser.authenticateUser(authenticationDetails, {
+                onSuccess: (session) => {
+                    currentSession = session;
+                    showMessage('Signed in successfully!');
+                    setAuthCookies(session);
+                    showUserInfo(cognitoUser);
+                },
+                onFailure: (err) => {
+                    showMessage(err.message || 'Error signing in', true);
+                }
+            });
+        }
+        
+        function signOut() {
+            if (cognitoUser) {
+                cognitoUser.signOut();
+            }
+            
+            clearAuthCookies();
+            cognitoUser = null;
+            currentSession = null;
+            showAuth();
+        }
+        
+        async function testAPI() {
+            if (!currentSession) {
+                showMessage('Not authenticated', true);
+                return;
+            }
+            
+            try {
+                const accessToken = currentSession.getAccessToken().getJwtToken();
+                
+                const response = await fetch(`${CONFIG.apiUrl}/party`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: 'Test Party from Frontend'
+                    })
+                });
+                
+                const result = await response.json();
+                document.getElementById('apiResult').innerHTML = 
+                    `<h4>API Response:</h4><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                
+            } catch (error) {
+                document.getElementById('apiResult').innerHTML = 
+                    `<h4>API Error:</h4><p style="color: red;">${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

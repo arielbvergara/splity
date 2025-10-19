@@ -127,7 +127,7 @@ public class PartyRepository(IDbConnection connection) : IPartyRepository
                             jsonb_build_object(
                                 'ExpenseId', ep.ExpenseId,
                                 'UserId', ep.UserId,
-                                'Share', ep.Share,
+                                'Quantity', ep.Quantity,
                                 'User', jsonb_build_object(
                                     'UserId', uep.UserId,
                                     'Name', uep.Name,

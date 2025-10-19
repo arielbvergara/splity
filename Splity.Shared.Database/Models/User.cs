@@ -8,5 +8,6 @@ public class User
     public required string Name { get; set; }
     [EmailAddress]
     public required string Email { get; set; }
+    public string? CognitoUserId { get; set; }
     public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
 }
