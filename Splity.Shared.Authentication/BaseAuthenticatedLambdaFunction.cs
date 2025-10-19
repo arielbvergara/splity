@@ -6,8 +6,6 @@ using Splity.Shared.Authentication.Models;
 using Splity.Shared.Authentication.Services;
 using Splity.Shared.Authentication.Services.Interfaces;
 using Splity.Shared.Common;
-using Splity.Shared.Common.Configuration;
-using Splity.Shared.Database;
 using Splity.Shared.Database.Repositories;
 
 namespace Splity.Shared.Authentication;

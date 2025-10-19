@@ -1,23 +1,16 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.IdentityModel.Tokens;
 using Splity.Shared.Authentication.Models;
 using Splity.Shared.Authentication.Services.Interfaces;
 
 namespace Splity.Shared.Authentication.Services;
 
-public class JwtTokenValidator : IJwtTokenValidator
+public class JwtTokenValidator(HttpClient httpClient, string userPoolId, string clientId, string region = "eu-west-2")
+    : IJwtTokenValidator
 {
-    private readonly HttpClient _httpClient;
-    private readonly string _cognitoIssuer;
-    private readonly string _cognitoAudience;
-    
-    public JwtTokenValidator(HttpClient httpClient, string userPoolId, string clientId, string region = "eu-west-2")
-    {
-        _httpClient = httpClient;
-        _cognitoIssuer = $"https://cognito-idp.{region}.amazonaws.com/{userPoolId}";
-        _cognitoAudience = clientId;
-    }
+    private readonly string _cognitoIssuer = $"https://cognito-idp.{region}.amazonaws.com/{userPoolId}";
 
     public async Task<CognitoUser?> ValidateTokenAsync(string token)
     {
@@ -25,6 +18,9 @@ public class JwtTokenValidator : IJwtTokenValidator
         {
             var handler = new JwtSecurityTokenHandler();
             
+            // Parse token to check claims before validation
+            var jsonToken = handler.ReadJwtToken(token);
+
             // Get the JWT keys from Cognito
             var keys = await GetJwtKeysAsync();
             if (keys == null || !keys.Any())
@@ -32,14 +28,17 @@ public class JwtTokenValidator : IJwtTokenValidator
                 return null;
             }
 
+            // Check if token has audience claim
+            var hasAudience = jsonToken.Claims.Any(c => c.Type == "aud" && !string.IsNullOrEmpty(c.Value));
+
             var validationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKeys = keys,
                 ValidateIssuer = true,
                 ValidIssuer = _cognitoIssuer,
-                ValidateAudience = true,
-                ValidAudience = _cognitoAudience,
+                ValidateAudience = hasAudience,
+                ValidAudience = hasAudience ? clientId : null,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.FromMinutes(5)
             };
@@ -47,8 +46,9 @@ public class JwtTokenValidator : IJwtTokenValidator
             var principal = handler.ValidateToken(token, validationParameters, out var validatedToken);
             return ExtractUserFromClaims(principal.Claims);
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            Console.WriteLine("ValidateTokenAsync ERROR: " + e.Message);
             return null;
         }
     }
@@ -58,16 +58,21 @@ public class JwtTokenValidator : IJwtTokenValidator
         try
         {
             var jwksUri = $"{_cognitoIssuer}/.well-known/jwks.json";
-            var response = await _httpClient.GetAsync(jwksUri);
-            
+            var response = await httpClient.GetAsync(jwksUri);
+
             if (!response.IsSuccessStatusCode)
             {
                 return null;
             }
 
             var jwksJson = await response.Content.ReadAsStringAsync();
-            var jwks = System.Text.Json.JsonSerializer.Deserialize<JwksResponse>(jwksJson);
-            
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            var jwks = JsonSerializer.Deserialize<JwksResponse>(jwksJson, options);
+
             return jwks?.Keys?.Select(key => {
                 var rsaParameters = new System.Security.Cryptography.RSAParameters
                 {
@@ -79,18 +84,25 @@ public class JwtTokenValidator : IJwtTokenValidator
                 return new RsaSecurityKey(rsa) { KeyId = key.Kid };
             });
         }
-        catch
+        catch(Exception e)
         {
+            Console.WriteLine("GetJwtKeysAsync ERROR: " + e.Message);
             return null;
         }
     }
 
     private static byte[] FromBase64UrlString(string base64Url)
     {
-        string padded = base64Url.Length % 4 == 0
-            ? base64Url
-            : base64Url + "=====".Substring(base64Url.Length % 4);
-        string base64 = padded.Replace("-", "+").Replace("_", "/");
+        // Replace URL-safe characters
+        string base64 = base64Url.Replace('-', '+').Replace('_', '/');
+        
+        // Add padding if needed
+        switch (base64.Length % 4)
+        {
+            case 2: base64 += "=="; break;
+            case 3: base64 += "="; break;
+        }
+        
         return Convert.FromBase64String(base64);
     }
 
@@ -98,11 +110,19 @@ public class JwtTokenValidator : IJwtTokenValidator
     {
         var claimsList = claims.ToList();
         
+        // For access tokens, subject is in nameidentifier claim
+        var userId = claimsList.FirstOrDefault(c => c.Type == "sub")?.Value ?? 
+                     claimsList.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value ?? 
+                     string.Empty;
+        
+        // Username might be available in access tokens
+        var username = claimsList.FirstOrDefault(c => c.Type == "username")?.Value ?? string.Empty;
+        
         return new CognitoUser
         {
-            CognitoUserId = claimsList.FirstOrDefault(c => c.Type == "sub")?.Value ?? string.Empty,
+            CognitoUserId = userId,
             Email = claimsList.FirstOrDefault(c => c.Type == "email")?.Value ?? string.Empty,
-            Name = claimsList.FirstOrDefault(c => c.Type == "name" || c.Type == "given_name")?.Value ?? string.Empty,
+            Name = claimsList.FirstOrDefault(c => c.Type == "name" || c.Type == "given_name")?.Value ?? username,
             Roles = claimsList.Where(c => c.Type == "cognito:groups").Select(c => c.Value).ToList()
         };
     }
