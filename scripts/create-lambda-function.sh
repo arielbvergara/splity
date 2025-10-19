@@ -27,20 +27,22 @@ dotnet new lambda.EmptyFunction -n "${PROJECT_NAME}" -o "${REPO_ROOT}/${PROJECT_
 # Step 2: Navigate to function directory (for context)
 cd "${REPO_ROOT}/${PROJECT_NAME}"
 
-# Step 3: Add projects to solution
-echo "Step 3: Adding projects to solution..."
+# Step 3: Add projects to respective solution folders
+echo "Step 3: Adding projects to solution folders..."
 cd "${REPO_ROOT}"
-dotnet sln Splity.sln add "${PROJECT_NAME}/src/${PROJECT_NAME}/${PROJECT_NAME}.csproj"
-dotnet sln Splity.sln add "${PROJECT_NAME}/test/${PROJECT_NAME}.Tests/${PROJECT_NAME}.Tests.csproj"
-
-# Step 4: Add projects to respective solution folders
-echo "Step 4: Adding projects to solution folders..."
 dotnet sln Splity.sln add --solution-folder src "${PROJECT_NAME}/src/${PROJECT_NAME}/${PROJECT_NAME}.csproj"
 dotnet sln Splity.sln add --solution-folder tests "${PROJECT_NAME}/test/${PROJECT_NAME}.Tests/${PROJECT_NAME}.Tests.csproj"
 
-# Step 5: Add test references
-echo "Step 5: Adding test project references and packages..."
+# Step 4: Update Amazon.Lambda.Core to latest version in both projects
+echo "Step 4: Updating Amazon.Lambda.Core to latest version..."
+cd "${REPO_ROOT}/${PROJECT_NAME}/src/${PROJECT_NAME}"
+dotnet add package Amazon.Lambda.Core
+
 cd "${REPO_ROOT}/${PROJECT_NAME}/test/${PROJECT_NAME}.Tests"
+dotnet add package Amazon.Lambda.Core
+
+# Step 5: Add test references and packages
+echo "Step 5: Adding test project references and packages..."
 dotnet add reference "../../src/${PROJECT_NAME}/${PROJECT_NAME}.csproj"
 dotnet add package Amazon.Lambda.TestUtilities
 dotnet add package FluentAssertions
