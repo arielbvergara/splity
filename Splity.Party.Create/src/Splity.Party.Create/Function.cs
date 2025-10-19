@@ -62,8 +62,7 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
             }
 
             // Use the authenticated user's ID as the owner
-            createPartyRequest.OwnerId = CurrentUserId;
-            var party = await _partyRepository.CreateParty(createPartyRequest);
+            var party = await _partyRepository.CreateParty(createPartyRequest, CurrentUserId);
 
             return CreateSuccessResponse(HttpStatusCode.Created, party, "POST");
         }

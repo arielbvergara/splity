@@ -41,7 +41,7 @@ public class PartyRepository(IDbConnection connection) : IPartyRepository
         });
     }
 
-    public async Task<PartyDto> CreateParty(CreatePartyRequest request)
+    public async Task<PartyDto> CreateParty(CreatePartyRequest request, Guid ownerId)
     {
         var partyId = Guid.NewGuid();
 
@@ -49,7 +49,7 @@ public class PartyRepository(IDbConnection connection) : IPartyRepository
 
         await using var insert = new NpgsqlCommand(sql, (NpgsqlConnection)connection);
         insert.Parameters.AddWithValue("@partyId", partyId);
-        insert.Parameters.AddWithValue("@ownerId", request.OwnerId);
+        insert.Parameters.AddWithValue("@ownerId", ownerId);
         insert.Parameters.AddWithValue("@name", request.Name);
 
         await insert.ExecuteNonQueryAsync();
