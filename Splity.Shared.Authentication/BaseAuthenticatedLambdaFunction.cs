@@ -14,7 +14,6 @@ public abstract class BaseAuthenticatedLambdaFunction : BaseLambdaFunction
 {
     private readonly IAuthenticationService _authService;
     protected CognitoUser? CurrentUser { get; private set; }
-    protected Guid CurrentUserId { get; private set; }
 
     protected BaseAuthenticatedLambdaFunction(IDbConnection connection, IAuthenticationService? authService = null)
     {
@@ -70,16 +69,15 @@ public abstract class BaseAuthenticatedLambdaFunction : BaseLambdaFunction
         {
             CurrentUser = await _authService.GetUserFromRequestAsync(request);
             
-            if (CurrentUser == null || !CurrentUser.IsAuthenticated)
+            if (CurrentUser is not { IsAuthenticated: true })
             {
-                return CreateErrorResponse(HttpStatusCode.Unauthorized, "Authentication required", request.RequestContext.Http.Method);
+                return CreateUnauthorizedResponse(request.RequestContext.Http.Method);
             }
 
             // Ensure user exists in our database and get the UserId
-            CurrentUserId = await _authService.EnsureUserExistsAsync(CurrentUser);
-            CurrentUser.SplityUserId = CurrentUserId;
+            CurrentUser.SplityUserId = await _authService.EnsureUserExistsAsync(CurrentUser);
 
-            context.Logger.LogInformation($"Authenticated user: {CurrentUser.Email} (ID: {CurrentUserId})");
+            context.Logger.LogInformation($"Authenticated user: {CurrentUser.Email} (ID: {CurrentUser.SplityUserId})");
             return null; // Success - no response needed
         }
         catch (Exception ex)
@@ -89,7 +87,7 @@ public abstract class BaseAuthenticatedLambdaFunction : BaseLambdaFunction
         }
     }
 
-    protected APIGatewayHttpApiV2ProxyResponse CreateUnauthorizedResponse(string method)
+    private APIGatewayHttpApiV2ProxyResponse CreateUnauthorizedResponse(string method)
     {
         return CreateErrorResponse(HttpStatusCode.Unauthorized, "Authentication required", method);
     }

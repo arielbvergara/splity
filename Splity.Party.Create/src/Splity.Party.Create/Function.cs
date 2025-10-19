@@ -1,12 +1,10 @@
 using System.Data;
 using System.Net;
 using System.Text.Json;
-using Amazon;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
 using Splity.Shared.Authentication;
 using Splity.Shared.Authentication.Services.Interfaces;
-using Splity.Shared.Database;
 using Splity.Shared.Database.Models.Commands;
 using Splity.Shared.Database.Repositories;
 using Splity.Shared.Database.Repositories.Interfaces;
@@ -20,7 +18,7 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
 {
     private readonly IPartyRepository _partyRepository = partyRepository ?? new PartyRepository(connection);
 
-    public Function() : this(CreateDatabaseConnection(), null, null)
+    public Function() : this(CreateDatabaseConnection())
     {
     }
 
@@ -53,7 +51,6 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
 
         try
         {
-            context.Logger.LogInformation($"Creating party with request body: {request.Body}");
             var createPartyRequest = JsonSerializer.Deserialize<CreatePartyRequest>(request.Body, JsonOptions);
 
             if (createPartyRequest == null || string.IsNullOrWhiteSpace(createPartyRequest.Name))
@@ -62,12 +59,13 @@ public class Function(IDbConnection connection, IPartyRepository? partyRepositor
             }
 
             // Use the authenticated user's ID as the owner
-            var party = await _partyRepository.CreateParty(createPartyRequest, CurrentUserId);
+            var party = await _partyRepository.CreateParty(createPartyRequest, CurrentUser!.SplityUserId!.Value);
 
             return CreateSuccessResponse(HttpStatusCode.Created, party, "POST");
         }
         catch (JsonException)
         {
+            context.Logger.LogError("Invalid JSON format");
             return CreateErrorResponse(HttpStatusCode.BadRequest, "Invalid JSON format", "POST");
         }
         catch (Exception ex)

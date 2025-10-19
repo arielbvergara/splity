@@ -252,7 +252,6 @@ public class FunctionTests
         mockAuthService.Verify(a => a.GetUserFromRequestAsync(It.IsAny<APIGatewayHttpApiV2ProxyRequest>()), Times.Once, "because authentication should be checked");
         mockAuthService.Verify(a => a.EnsureUserExistsAsync(authenticatedUser), Times.Once, "because user should be ensured to exist");
         mockRepository.Verify(r => r.CreateParty(It.IsAny<CreatePartyRequest>(), authenticatedUserId), Times.Once, "because the repository method should be called with authenticated user ID");
-        mockLogger.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains("Creating party with request body"))), Times.Once, "because the processing should be logged");
         mockLogger.Verify(l => l.LogInformation(It.Is<string>(s => s.Contains($"Authenticated user: {authenticatedUser.Email}"))), Times.Once, "because authentication should be logged");
     }
 
