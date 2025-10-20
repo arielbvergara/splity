@@ -10,6 +10,7 @@ interface CacheEntry<T> {
 
 class Cache {
   private cache = new Map<string, CacheEntry<any>>()
+  private pendingRequests = new Map<string, Promise<any>>()
 
   /**
    * Set a cache entry with TTL in milliseconds
@@ -54,6 +55,7 @@ class Cache {
    */
   remove(key: string): void {
     this.cache.delete(key)
+    this.pendingRequests.delete(key)
   }
 
   /**
@@ -61,6 +63,7 @@ class Cache {
    */
   clear(): void {
     this.cache.clear()
+    this.pendingRequests.clear()
   }
 
   /**
@@ -87,7 +90,7 @@ export const CACHE_TTL = {
 } as const
 
 /**
- * Utility function to create cache-aware API calls
+ * Utility function to create cache-aware API calls with request deduplication
  */
 export async function cacheableRequest<T>(
   cacheKey: string,
@@ -101,15 +104,33 @@ export async function cacheableRequest<T>(
     return cached
   }
 
+  // Check if there's already a pending request for this key
+  const pendingRequest = cache.pendingRequests.get(cacheKey)
+  if (pendingRequest) {
+    console.log(`Cache PENDING for key: ${cacheKey}, waiting for existing request`)
+    return pendingRequest as Promise<T>
+  }
+
   console.log(`Cache MISS for key: ${cacheKey}, making request`)
-  // Not in cache, make the request
-  const result = await requestFn()
   
-  console.log(`Caching result for key: ${cacheKey}`, result)
-  // Cache the result
-  cache.set(cacheKey, result, ttlMs)
+  // Create the request promise and store it to prevent duplicates
+  const requestPromise = requestFn().then((result) => {
+    console.log(`Caching result for key: ${cacheKey}`, result)
+    // Cache the result
+    cache.set(cacheKey, result, ttlMs)
+    // Remove from pending requests
+    cache.pendingRequests.delete(cacheKey)
+    return result
+  }).catch((error) => {
+    // Remove from pending requests on error too
+    cache.pendingRequests.delete(cacheKey)
+    throw error
+  })
   
-  return result
+  // Store the pending request
+  cache.pendingRequests.set(cacheKey, requestPromise)
+  
+  return requestPromise
 }
 
 // Cleanup expired entries every 10 minutes
