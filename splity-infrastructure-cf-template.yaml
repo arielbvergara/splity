@@ -190,6 +190,7 @@ Resources:
   # does not support inline ZipFile code. The placeholder JavaScript code allows
   # CloudFormation to create the functions, then actual .NET code is deployed
   # later using 'dotnet lambda deploy-function' commands.
+  # NOTE 2: Environment variables are set in parameter store to have 1 source.
   SplityCreatePartyFunction:
     Type: AWS::Lambda::Function
     DependsOn: SplityPartyLambdaRole
@@ -356,6 +357,51 @@ Resources:
           AWS_BUCKET_NAME: !Ref S3BucketName
           AWS_BUCKET_REGION: !Ref S3BucketRegion
           ALLOWED_ORIGINS: !Ref AllowedOrigins
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: Splity
+        - Key: Entity
+          Value: Party
+
+  SplityGetPartiesFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: SplityPartyLambdaRole
+    Properties:
+      FunctionName: !Sub 'SplityGetParties-${Environment}'
+      Runtime: nodejs18.x
+      Handler: index.handler
+      Role: !GetAtt SplityPartyLambdaRole.Arn
+      Code:
+        ZipFile: |
+          exports.handler = async function(event) {
+            return {
+              statusCode: 200,
+              headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+              },
+              body: JSON.stringify({
+                message: 'Placeholder GetParties function - deploy .NET code using: dotnet lambda deploy-function --function-name SplityGetParties-dev'
+              })
+            };
+          };
+      MemorySize: 512
+      Timeout: 30
+      Environment:
+        Variables:
+          CLUSTER_DATABASE: !Ref ClusterDatabase
+          CLUSTER_HOSTNAME: !Sub '${SplityDsqlCluster}.dsql.${AWS::Region}.on.aws'
+          CLUSTER_USERNAME: !Ref ClusterUsername
+          DSQL_CLUSTER_ARN: !GetAtt SplityDsqlCluster.ResourceArn
+          AWS_BUCKET_NAME: !Ref S3BucketName
+          AWS_BUCKET_REGION: !Ref S3BucketRegion
+          ALLOWED_ORIGINS: !Ref AllowedOrigins
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
+          COGNITO_CLIENT_ID: !Ref CognitoClientId
       Tags:
         - Key: Environment
           Value: !Ref Environment
@@ -701,6 +747,14 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SplityPartyApi}/*/*'
 
+  GetPartiesLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SplityGetPartiesFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SplityPartyApi}/*/*'
+
   # Expenses Lambda Permissions
   CreateExpensesLambdaPermission:
     Type: AWS::Lambda::Permission
@@ -795,6 +849,17 @@ Resources:
       PayloadFormatVersion: '2.0'
       TimeoutInMillis: 30000
       Description: 'Delete party integration'
+
+  GetPartiesIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    DependsOn: GetPartiesLambdaPermission
+    Properties:
+      ApiId: !Ref SplityPartyApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SplityGetPartiesFunction.Arn}/invocations'
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 30000
+      Description: 'Get parties integration'
 
   # Expenses API Gateway Integrations
   CreateExpensesIntegration:
@@ -893,6 +958,13 @@ Resources:
       RouteKey: 'DELETE /party/{id}'
       Target: !Sub 'integrations/${DeletePartyIntegration}'
 
+  GetPartiesRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SplityPartyApi
+      RouteKey: 'GET /parties'
+      Target: !Sub 'integrations/${GetPartiesIntegration}'
+
   # Expenses API Gateway Routes
   CreateExpensesRoute:
     Type: AWS::ApiGatewayV2::Route
@@ -976,6 +1048,12 @@ Outputs:
     Export:
       Name: !Sub '${AWS::StackName}-DeletePartyFunctionArn'
 
+  GetPartiesFunctionArn:
+    Description: 'Get Parties Lambda Function ARN'
+    Value: !GetAtt SplityGetPartiesFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-GetPartiesFunctionArn'
+
   # IAM Role Output
   LambdaRoleArn:
     Description: 'Lambda execution role ARN'
@@ -999,6 +1077,10 @@ Outputs:
   DeletePartyEndpoint:
     Description: 'DELETE endpoint to delete a party'
     Value: !Sub 'https://${SplityPartyApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/party/{id}'
+
+  GetPartiesEndpoint:
+    Description: 'GET endpoint to retrieve all parties for authenticated user'
+    Value: !Sub 'https://${SplityPartyApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/parties'
 
   # Expenses Function Outputs
   CreateExpensesFunctionArn:
