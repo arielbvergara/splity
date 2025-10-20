@@ -5,69 +5,69 @@ Parameters:
   Environment:
     Type: String
     Default: dev
-    AllowedValues: [dev, staging, prod, acceptance]
+    AllowedValues: [ dev, staging, prod, acceptance ]
     Description: Environment name
-    
+
   ClusterHostname:
     Type: String
     Default: ""
     Description: PostgreSQL cluster hostname (will be automatically set by DSQL cluster if empty)
-    
+
   ClusterUsername:
     Type: String
     Default: admin
     Description: PostgreSQL cluster username
-    
+
   ClusterDatabase:
     Type: String
     Default: postgres
     Description: PostgreSQL database name
-    
+
   S3BucketName:
     Type: String
     Default: split-app-v1 # TODO: Add S3 bucket to cloud formation and make it dynamic
     Description: S3 bucket for receipt storage
-    
+
   S3BucketRegion:
     Type: String
     Default: eu-central-1 # TODO: Add S3 bucket to cloud formation and make it dynamic
     Description: S3 bucket region
-    
+
   AllowedOrigins:
     Type: String
     Default: "*"
     Description: CORS allowed origins
-    
+
   DocumentIntelligenceEndpoint:
     Type: String
     Default: https://di-document-reader-test.cognitiveservices.azure.com/
     Description: Azure Document Intelligence endpoint URL
-    
+
   DocumentIntelligenceApiKey:
     Type: String
     Default: ""
     NoEcho: true
     Description: Azure Document Intelligence API key (sensitive parameter)
-    
+
   DsqlClusterDeletionProtection:
     Type: String
     Default: "false"
-    AllowedValues: ["true", "false"]
+    AllowedValues: [ "true", "false" ]
     Description: Enable deletion protection for Aurora DSQL cluster
-    
+
   CognitoUserPoolId:
     Type: String
     Default: ""
     Description: Cognito User Pool ID for authentication
-    
+
   CognitoClientId:
     Type: String
     Default: ""
     Description: Cognito User Pool Client ID for authentication
 
 Conditions:
-  HasCognitoUserPool: !Not [!Equals [!Ref CognitoUserPoolId, ""]]
-  HasCognitoClient: !Not [!Equals [!Ref CognitoClientId, ""]]
+  HasCognitoUserPool: !Not [ !Equals [ !Ref CognitoUserPoolId, "" ] ]
+  HasCognitoClient: !Not [ !Equals [ !Ref CognitoClientId, "" ] ]
 
 Resources:
   # NOTE: Parameter Store configuration is handled by scripts/setup-parameter-store.sh
@@ -215,8 +215,8 @@ Resources:
               })
             };
           };
-      MemorySize: 512
-      Timeout: 30
+      MemorySize: 128
+      Timeout: 5
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
@@ -260,8 +260,8 @@ Resources:
               })
             };
           };
-      MemorySize: 512
-      Timeout: 30
+      MemorySize: 128
+      Timeout: 5
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
@@ -303,8 +303,8 @@ Resources:
               })
             };
           };
-      MemorySize: 512
-      Timeout: 30
+      MemorySize: 128
+      Timeout: 5
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
@@ -346,8 +346,8 @@ Resources:
               })
             };
           };
-      MemorySize: 512
-      Timeout: 30
+      MemorySize: 128
+      Timeout: 5
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
@@ -389,8 +389,8 @@ Resources:
               })
             };
           };
-      MemorySize: 512
-      Timeout: 30
+      MemorySize: 128
+      Timeout: 5
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
@@ -435,8 +435,8 @@ Resources:
               })
             };
           };
-      MemorySize: 512
-      Timeout: 30
+      MemorySize: 128
+      Timeout: 5
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
@@ -478,8 +478,8 @@ Resources:
               })
             };
           };
-      MemorySize: 512
-      Timeout: 30
+      MemorySize: 128
+      Timeout: 5
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
@@ -521,8 +521,8 @@ Resources:
               })
             };
           };
-      MemorySize: 512
-      Timeout: 30
+      MemorySize: 128
+      Timeout: 10 # Needs more time than the rest of the lambda functions to process image
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
@@ -567,8 +567,8 @@ Resources:
               })
             };
           };
-      MemorySize: 512
-      Timeout: 30
+      MemorySize: 128
+      Timeout: 5
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
@@ -610,8 +610,8 @@ Resources:
               })
             };
           };
-      MemorySize: 512
-      Timeout: 30
+      MemorySize: 128
+      Timeout: 5
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
@@ -653,8 +653,8 @@ Resources:
               })
             };
           };
-      MemorySize: 512
-      Timeout: 30
+      MemorySize: 128
+      Timeout: 5
       Environment:
         Variables:
           CLUSTER_DATABASE: !Ref ClusterDatabase
@@ -1152,13 +1152,13 @@ Outputs:
     Value: !GetAtt SplityDsqlCluster.ResourceArn
     Export:
       Name: !Sub '${AWS::StackName}-DsqlClusterArn'
-      
+
   DsqlClusterEndpoint:
     Description: 'Aurora DSQL Cluster Endpoint'
     Value: !Sub '${SplityDsqlCluster}.dsql.${AWS::Region}.on.aws'
     Export:
       Name: !Sub '${AWS::StackName}-DsqlClusterEndpoint'
-      
+
   DsqlClusterIdentifier:
     Description: 'Aurora DSQL Cluster Identifier'
     Value: !Ref SplityDsqlCluster

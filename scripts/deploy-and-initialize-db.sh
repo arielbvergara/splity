@@ -73,33 +73,84 @@ else
 fi
 
 # Step 4: Deploy all other Lambda functions
-echo "🔧 Deploying all Lambda functions..."
+echo "🔧 Deploying all Lambda functions in parallel..."
 
-# Deploy functions in parallel for faster deployment
-{
-    echo "Deploying Party functions..."
-    cd Splity.Party.Create/src/Splity.Party.Create && dotnet lambda deploy-function --function-name SplityCreateParty-${ENVIRONMENT} --region ${REGION} &
-    cd ../../../Splity.Party.Get/src/Splity.Party.Get && dotnet lambda deploy-function --function-name SplityGetParty-${ENVIRONMENT} --region ${REGION} &
-    cd ../../../Splity.Party.Update/src/Splity.Party.Update && dotnet lambda deploy-function --function-name SplityUpdateParty-${ENVIRONMENT} --region ${REGION} &
-    cd ../../../Splity.Party.Delete/src/Splity.Party.Delete && dotnet lambda deploy-function --function-name SplityDeleteParty-${ENVIRONMENT} --region ${REGION} &
-} &
+# Get the current directory for absolute path references
+ROOT_DIR=$(pwd)
 
-{
-    echo "Deploying Expense functions..."
-    cd Splity.Expenses.Create/src/Splity.Expenses.Create && dotnet lambda deploy-function --function-name SplityCreateExpenses-${ENVIRONMENT} --region ${REGION} &
-    cd ../../../Splity.Expenses.Delete/src/Splity.Expenses.Delete && dotnet lambda deploy-function --function-name SplityDeleteExpenses-${ENVIRONMENT} --region ${REGION} &
-    cd ../../../Splity.Expenses.Extract/src/Splity.Expenses.Extract && dotnet lambda deploy-function --function-name SplityExtractExpenses-${ENVIRONMENT} --region ${REGION} &
-} &
+# Deploy functions in parallel - each in its own subshell with proper working directory
+echo "Starting Party function deployments..."
+(cd "$ROOT_DIR/Splity.Party.Create/src/Splity.Party.Create" && echo "Deploying SplityCreateParty-${ENVIRONMENT}..." && dotnet lambda deploy-function --function-name SplityCreateParty-${ENVIRONMENT} --region ${REGION}) &
+PID_PARTY_CREATE=$!
 
-{
-    echo "Deploying User functions..."
-    cd Splity.User.Create/src/Splity.User.Create && dotnet lambda deploy-function --function-name SplityCreateUser-${ENVIRONMENT} --region ${REGION} &
-    cd ../../../Splity.User.Get/src/Splity.User.Get && dotnet lambda deploy-function --function-name SplityGetUser-${ENVIRONMENT} --region ${REGION} &
-    cd ../../../Splity.User.Update/src/Splity.User.Update && dotnet lambda deploy-function --function-name SplityUpdateUser-${ENVIRONMENT} --region ${REGION} &
-} &
+(cd "$ROOT_DIR/Splity.Party.Get/src/Splity.Party.Get" && echo "Deploying SplityGetParty-${ENVIRONMENT}..." && dotnet lambda deploy-function --function-name SplityGetParty-${ENVIRONMENT} --region ${REGION}) &
+PID_PARTY_GET=$!
 
-# Wait for all background jobs to complete
-wait
+(cd "$ROOT_DIR/Splity.Party.Update/src/Splity.Party.Update" && echo "Deploying SplityUpdateParty-${ENVIRONMENT}..." && dotnet lambda deploy-function --function-name SplityUpdateParty-${ENVIRONMENT} --region ${REGION}) &
+PID_PARTY_UPDATE=$!
+
+(cd "$ROOT_DIR/Splity.Party.Delete/src/Splity.Party.Delete" && echo "Deploying SplityDeleteParty-${ENVIRONMENT}..." && dotnet lambda deploy-function --function-name SplityDeleteParty-${ENVIRONMENT} --region ${REGION}) &
+PID_PARTY_DELETE=$!
+
+(cd "$ROOT_DIR/Splity.Parties.Get/src/Splity.Parties.Get" && echo "Deploying SplityGetParties-${ENVIRONMENT}..." && dotnet lambda deploy-function --function-name SplityGetParties-${ENVIRONMENT} --region ${REGION}) &
+PID_PARTIES_GET=$!
+
+echo "Starting Expense function deployments..."
+(cd "$ROOT_DIR/Splity.Expenses.Create/src/Splity.Expenses.Create" && echo "Deploying SplityCreateExpenses-${ENVIRONMENT}..." && dotnet lambda deploy-function --function-name SplityCreateExpenses-${ENVIRONMENT} --region ${REGION}) &
+PID_EXPENSES_CREATE=$!
+
+(cd "$ROOT_DIR/Splity.Expenses.Delete/src/Splity.Expenses.Delete" && echo "Deploying SplityDeleteExpenses-${ENVIRONMENT}..." && dotnet lambda deploy-function --function-name SplityDeleteExpenses-${ENVIRONMENT} --region ${REGION}) &
+PID_EXPENSES_DELETE=$!
+
+(cd "$ROOT_DIR/Splity.Expenses.Extract/src/Splity.Expenses.Extract" && echo "Deploying SplityExtractExpenses-${ENVIRONMENT}..." && dotnet lambda deploy-function --function-name SplityExtractExpenses-${ENVIRONMENT} --region ${REGION}) &
+PID_EXPENSES_EXTRACT=$!
+
+echo "Starting User function deployments..."
+(cd "$ROOT_DIR/Splity.User.Create/src/Splity.User.Create" && echo "Deploying SplityCreateUser-${ENVIRONMENT}..." && dotnet lambda deploy-function --function-name SplityCreateUser-${ENVIRONMENT} --region ${REGION}) &
+PID_USER_CREATE=$!
+
+(cd "$ROOT_DIR/Splity.User.Get/src/Splity.User.Get" && echo "Deploying SplityGetUser-${ENVIRONMENT}..." && dotnet lambda deploy-function --function-name SplityGetUser-${ENVIRONMENT} --region ${REGION}) &
+PID_USER_GET=$!
+
+(cd "$ROOT_DIR/Splity.User.Update/src/Splity.User.Update" && echo "Deploying SplityUpdateUser-${ENVIRONMENT}..." && dotnet lambda deploy-function --function-name SplityUpdateUser-${ENVIRONMENT} --region ${REGION}) &
+PID_USER_UPDATE=$!
+
+echo "Waiting for all deployments to complete..."
+# Store all PIDs for tracking
+DEPLOYMENT_PIDS=($PID_PARTY_CREATE $PID_PARTY_GET $PID_PARTY_UPDATE $PID_PARTY_DELETE $PID_EXPENSES_CREATE $PID_EXPENSES_DELETE $PID_EXPENSES_EXTRACT $PID_USER_CREATE $PID_USER_GET $PID_USER_UPDATE)
+FAILED_DEPLOYMENTS=()
+
+# Wait for each deployment and track failures
+for i in "${!DEPLOYMENT_PIDS[@]}"; do
+    PID=${DEPLOYMENT_PIDS[$i]}
+    if ! wait $PID; then
+        case $i in
+            0) FAILED_DEPLOYMENTS+=("SplityCreateParty-${ENVIRONMENT}") ;;
+            1) FAILED_DEPLOYMENTS+=("SplityGetParty-${ENVIRONMENT}") ;;
+            2) FAILED_DEPLOYMENTS+=("SplityUpdateParty-${ENVIRONMENT}") ;;
+            3) FAILED_DEPLOYMENTS+=("SplityDeleteParty-${ENVIRONMENT}") ;;
+            4) FAILED_DEPLOYMENTS+=("SplityCreateExpenses-${ENVIRONMENT}") ;;
+            5) FAILED_DEPLOYMENTS+=("SplityDeleteExpenses-${ENVIRONMENT}") ;;
+            6) FAILED_DEPLOYMENTS+=("SplityExtractExpenses-${ENVIRONMENT}") ;;
+            7) FAILED_DEPLOYMENTS+=("SplityCreateUser-${ENVIRONMENT}") ;;
+            8) FAILED_DEPLOYMENTS+=("SplityGetUser-${ENVIRONMENT}") ;;
+            9) FAILED_DEPLOYMENTS+=("SplityUpdateUser-${ENVIRONMENT}") ;;
+            10)FAILED_DEPLOYMENTS+=("SplityPartiesGet-${ENVIRONMENT}") ;;
+        esac
+    fi
+done
+
+# Report deployment results
+if [ ${#FAILED_DEPLOYMENTS[@]} -eq 0 ]; then
+    echo "✅ All Lambda functions deployed successfully!"
+else
+    echo "⚠️  Some deployments failed:"
+    for failed_function in "${FAILED_DEPLOYMENTS[@]}"; do
+        echo "   - $failed_function"
+    done
+    echo "❌ Deployment completed with ${#FAILED_DEPLOYMENTS[@]} failures"
+    exit 1
+fi
 
 if [[ "$SKIP_DB" == "true" ]]; then
     echo "🎉 Deployment completed successfully (database skipped)!"
