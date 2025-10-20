@@ -38,12 +38,12 @@ export function CreateExpenseDialog({ party, onExpenseCreated }: CreateExpenseDi
   const [amount, setAmount] = useState("")
   const [currency, setCurrency] = useState("USD")
   const [category, setCategory] = useState<ExpenseCategory>("other")
-  const [paidBy, setPaidBy] = useState(party.members[0]?.userId || "")
+  const [paidBy, setPaidBy] = useState("")
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [splitType, setSplitType] = useState<"equal" | "percentage" | "custom">("equal")
 
   // Split state
-  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set(party.members.map((m) => m.userId)))
+  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set(party?.members?.map((m) => m.userId)))
   const [customSplits, setCustomSplits] = useState<Record<string, number>>({})
 
   const handleMemberToggle = (userId: string) => {
@@ -63,7 +63,7 @@ export function CreateExpenseDialog({ party, onExpenseCreated }: CreateExpenseDi
     if (splitType === "equal") {
       const splitAmount = totalAmount / selectedMembersList.length
       return selectedMembersList.map((userId) => {
-        const member = party.members.find((m) => m.userId === userId)
+        const member = party.members?.find((m) => m.userId === userId)
         return {
           userId,
           userName: member?.name || "",
@@ -75,7 +75,7 @@ export function CreateExpenseDialog({ party, onExpenseCreated }: CreateExpenseDi
 
     if (splitType === "custom") {
       return selectedMembersList.map((userId) => {
-        const member = party.members.find((m) => m.userId === userId)
+        const member = party.members?.find((m) => m.userId === userId)
         return {
           userId,
           userName: member?.name || "",
@@ -116,15 +116,14 @@ export function CreateExpenseDialog({ party, onExpenseCreated }: CreateExpenseDi
     setLoading(true)
     try {
       const input: CreateExpenseInput = {
-        partyId: party.id,
+        partyId: party.partyId,
         description,
         amount: totalAmount,
         currency,
         category,
-        paidBy,
+        payerId: paidBy,
         splitType,
-        splits,
-        date,
+        splits
       }
 
       await expenseService.createExpense(input)
@@ -138,7 +137,7 @@ export function CreateExpenseDialog({ party, onExpenseCreated }: CreateExpenseDi
       setAmount("")
       setCategory("other")
       setDate(new Date().toISOString().split("T")[0])
-      setSelectedMembers(new Set(party.members.map((m) => m.userId)))
+      setSelectedMembers(new Set(party.members?.map((m) => m.userId)))
       setCustomSplits({})
 
       setOpen(false)
@@ -155,7 +154,7 @@ export function CreateExpenseDialog({ party, onExpenseCreated }: CreateExpenseDi
     }
   }
 
-  const paidByMember = party.members.find((m) => m.userId === paidBy)
+  const paidByMember = party.members?.find((m) => m.userId === paidBy)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -252,7 +251,7 @@ export function CreateExpenseDialog({ party, onExpenseCreated }: CreateExpenseDi
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {party.members.map((member) => (
+                  {party.members?.map((member) => (
                     <SelectItem key={member.userId} value={member.userId}>
                       {member.name}
                     </SelectItem>
@@ -275,7 +274,7 @@ export function CreateExpenseDialog({ party, onExpenseCreated }: CreateExpenseDi
                 </TabsList>
 
                 <TabsContent value="equal" className="space-y-3 mt-4">
-                  {party.members.map((member) => (
+                  {party.members?.map((member) => (
                     <div key={member.userId} className="flex items-center justify-between rounded-lg border p-3">
                       <div className="flex items-center gap-3">
                         <Checkbox
@@ -294,7 +293,7 @@ export function CreateExpenseDialog({ party, onExpenseCreated }: CreateExpenseDi
                 </TabsContent>
 
                 <TabsContent value="custom" className="space-y-3 mt-4">
-                  {party.members.map((member) => (
+                  {party.members?.map((member) => (
                     <div key={member.userId} className="flex items-center gap-3 rounded-lg border p-3">
                       <Checkbox
                         checked={selectedMembers.has(member.userId)}

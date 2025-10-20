@@ -17,7 +17,7 @@ export function PartyMembers({ party }: PartyMembersProps) {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Members ({party.members.length})</CardTitle>
+          <CardTitle>Members ({party.members?.length ?? 0})</CardTitle>
           <Button className="gap-2">
             <UserPlus className="h-4 w-4" />
             Add Member
@@ -26,7 +26,7 @@ export function PartyMembers({ party }: PartyMembersProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {party.members.map((member) => (
+          {party.members?.map((member) => (
             <div key={member.userId} className="flex items-center justify-between rounded-lg border border-border p-4">
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12">

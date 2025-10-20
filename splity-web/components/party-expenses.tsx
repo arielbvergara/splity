@@ -29,15 +29,15 @@ export function PartyExpenses({ party }: PartyExpensesProps) {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Expenses ({party.expenses.length})</CardTitle>
+          <CardTitle>Expenses ({party?.expenses?.length ?? 0})</CardTitle>
           <div className="flex gap-2">
-            <ScanReceiptDialog partyId={party.id} onReceiptSaved={handleReceiptSaved} />
+            <ScanReceiptDialog partyId={party?.partyId} onReceiptSaved={handleReceiptSaved} />
             <CreateExpenseDialog party={party} onExpenseCreated={handleExpenseCreated} />
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        {party.expenses.length === 0 ? (
+        {party?.expenses?.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border bg-muted/50 p-12 text-center">
             <Receipt className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold text-foreground">No expenses yet</h3>
@@ -47,9 +47,9 @@ export function PartyExpenses({ party }: PartyExpensesProps) {
           </div>
         ) : (
           <div className="space-y-3">
-            {party.expenses.map((expense) => (
+            {party.expenses?.map((expense) => (
               <div
-                key={expense.id}
+                key={expense?.partyId}
                 className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
               >
                 <div className="flex-1">
@@ -68,7 +68,7 @@ export function PartyExpenses({ party }: PartyExpensesProps) {
                     </div>
                     <div className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      {formatDate(expense.date, "relative")}
+                      {formatDate(expense?.createdAt, "relative")}
                     </div>
                   </div>
                 </div>

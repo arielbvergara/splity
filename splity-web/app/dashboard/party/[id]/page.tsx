@@ -74,7 +74,7 @@ export default function PartyPage({ params }: PartyPageProps) {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Members</p>
-                  <p className="text-2xl font-bold text-foreground">{party.members.length}</p>
+                  <p className="text-2xl font-bold text-foreground">{party?.members?.length}</p>
                 </div>
               </CardContent>
             </Card>
@@ -85,7 +85,7 @@ export default function PartyPage({ params }: PartyPageProps) {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Expenses</p>
-                  <p className="text-2xl font-bold text-foreground">{party.expenses.length}</p>
+                  <p className="text-2xl font-bold text-foreground">{party?.expenses?.length}</p>
                 </div>
               </CardContent>
             </Card>
@@ -96,7 +96,7 @@ export default function PartyPage({ params }: PartyPageProps) {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total</p>
-                  <p className="text-2xl font-bold text-foreground">{formatCurrency(party.totalExpenses)}</p>
+                  <p className="text-2xl font-bold text-foreground">{formatCurrency(party?.totalExpenses || 0)}</p>
                 </div>
               </CardContent>
             </Card>

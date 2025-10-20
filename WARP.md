@@ -333,3 +333,9 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_NAMED_IAM \
   --region eu-west-2
 ```
+
+# Process to create new lambda function
+1) create-lambda-function.sh
+2) make changes (developer)
+3) update splity-infrastructure-cf-template.yaml
+4) run deploy-and-initialize.sh
