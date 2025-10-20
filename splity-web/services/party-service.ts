@@ -59,14 +59,12 @@ export const partyService = {
     return cacheableRequest(
       'parties:all',
       async () => {
-        console.log('#######FETCHING FROM BACKEND#######')
         const response = await authenticatedApiClient.get<BackendApiResponse<Party[]>>("/parties")
         if (!response.success) {
           throw new Error(response.errorMessage || "Failed to get parties")
         }
         // The response.data contains {parties: Party[]}, we need just the array
         const data = response.data!
-        console.log('Backend response.data:', data)
         
         // Handle both possible response formats
         if (data && typeof data === 'object' && 'parties' in data) {

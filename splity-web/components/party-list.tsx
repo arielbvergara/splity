@@ -11,8 +11,6 @@ import { Spinner } from "@/components/ui/spinner"
 export function PartyList() {
   const { parties, loading } = useParties()
   const [searchQuery, setSearchQuery] = useState("")
-
-  console.log("PARTIES FROM LIST", parties, "Type:", typeof parties, "IsArray:", Array.isArray(parties))
   
   // Defensive check to ensure parties is an array
   const partiesArray = Array.isArray(parties) ? parties : []

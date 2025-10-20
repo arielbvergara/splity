@@ -21,7 +21,6 @@ export function useParties() {
     try {
       setLoading(true)
       const data = await partyService.getParties()
-      console.log("PARTIES RAW RESPONSE", data, "Type:", typeof data, "IsArray:", Array.isArray(data))
       
       // The service should now return Party[] directly
       if (Array.isArray(data)) {
