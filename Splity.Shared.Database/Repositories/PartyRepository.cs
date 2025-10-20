@@ -41,6 +41,32 @@ public class PartyRepository(IDbConnection connection) : IPartyRepository
         });
     }
 
+    public async Task<IEnumerable<PartyDto>> GetPartiesByUserId(Guid userId)
+    {
+        await using var select =
+            new NpgsqlCommand(GetPartiesByUserIdSql, (NpgsqlConnection)connection);
+        select.Parameters.AddWithValue("userId", userId);
+        await using var reader = await select.ExecuteReaderAsync();
+
+        var parties = new List<PartyDto>();
+        while (await reader.ReadAsync())
+        {
+            var partyJson = reader.GetString("PartyJson");
+            var party = JsonSerializer.Deserialize<PartyDto>(partyJson, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            
+            if (party != null)
+            {
+                parties.Add(party);
+            }
+        }
+
+        return parties;
+    }
+
     public async Task<PartyDto> CreateParty(CreatePartyRequest request, Guid ownerId)
     {
         var partyId = Guid.NewGuid();
@@ -189,4 +215,92 @@ SELECT
     )::text AS PartyJson
 FROM party_data pd;
 ";
+
+    private const string GetPartiesByUserIdSql = @"WITH party_data AS (
+    SELECT
+        p.PartyId,
+        p.OwnerId,
+        p.Name,
+        p.CreatedAt,
+        jsonb_build_object(
+            'UserId', u.UserId,
+            'Name', u.Name,
+            'Email', u.Email
+        ) AS Owner,
+        (
+            SELECT COALESCE(jsonb_agg(
+                jsonb_build_object(
+                    'ExpenseId', e.ExpenseId,
+                    'PartyId', e.PartyId,
+                    'PayerId', e.PayerId,
+                    'Description', e.Description,
+                    'Amount', e.Amount,
+                    'CreatedAt', e.CreatedAt,
+                    'Participants', (
+                        SELECT COALESCE(jsonb_agg(
+                            jsonb_build_object(
+                                'ExpenseId', ep.ExpenseId,
+                                'UserId', ep.UserId,
+                                'Quantity', ep.Quantity,
+                                'User', jsonb_build_object(
+                                    'UserId', uep.UserId,
+                                    'Name', uep.Name,
+                                    'Email', uep.Email
+                                )
+                            )
+                        ), '[]'::jsonb)
+                        FROM ExpenseParticipants ep
+                        JOIN Users uep ON ep.UserId = uep.UserId
+                        WHERE ep.ExpenseId = e.ExpenseId
+                    )
+                )
+            ), '[]'::jsonb)
+            FROM Expenses e
+            WHERE e.PartyId = p.PartyId
+        ) AS Expenses,
+        (
+            SELECT COALESCE(jsonb_agg(
+                jsonb_build_object(
+                    'PartyId', pc.PartyId,
+                    'UserId', pc.UserId,
+                    'User', jsonb_build_object(
+                        'UserId', uc.UserId,
+                        'Name', uc.Name,
+                        'Email', uc.Email
+                    )
+                )
+            ), '[]'::jsonb)
+            FROM PartyContributors pc
+            JOIN Users uc ON pc.UserId = uc.UserId
+            WHERE pc.PartyId = p.PartyId
+        ) AS Contributors,
+        (
+            SELECT COALESCE(jsonb_agg(
+                jsonb_build_object(
+                    'BillId', pb.BillId,
+                    'BillFileTitle', pb.BillFileTitle,
+                    'PartyId', pb.PartyId,
+                    'ImageURL', pb.ImageURL
+                )
+            ), '[]'::jsonb)
+            FROM PartyBillsImages pb
+            WHERE pb.PartyId = p.PartyId
+        ) AS BillImages
+    FROM Parties p
+    JOIN Users u ON p.OwnerId = u.UserId
+    WHERE p.OwnerId = :userId
+)
+SELECT
+    jsonb_build_object(
+        'PartyId', pd.PartyId,
+        'OwnerId', pd.OwnerId,
+        'Name', pd.Name,
+        'CreatedAt', pd.CreatedAt,
+        'Owner', pd.Owner,
+        'Expenses', pd.Expenses,
+        'Contributors', pd.Contributors,
+        'BillImages', pd.BillImages
+    )::text AS PartyJson
+FROM party_data pd
+ORDER BY pd.CreatedAt DESC;";
 }

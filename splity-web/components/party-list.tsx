@@ -12,7 +12,11 @@ export function PartyList() {
   const { parties, loading } = useParties()
   const [searchQuery, setSearchQuery] = useState("")
 
-  const filteredParties = parties.filter((party) => party.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  console.log("PARTIES FROM LIST", parties, "Type:", typeof parties, "IsArray:", Array.isArray(parties))
+  
+  // Defensive check to ensure parties is an array
+  const partiesArray = Array.isArray(parties) ? parties : []
+  const filteredParties = partiesArray.filter((party) => party.name.toLowerCase().includes(searchQuery.toLowerCase()))
 
   return (
     <div className="space-y-6">

@@ -13,31 +13,28 @@ export function useParties() {
   const { user, userDetails } = useCognitoAuth()
 
   useEffect(() => {
-    // Load parties from user details instead of separate endpoint (not implemented)
-    if (userDetails) {
-      setParties(userDetails.user.ownedParties || [])
+      loadParties()
       setLoading(false)
-      setError(null)
-    } else {
-      // loadParties() // Uncomment when backend implements getParties endpoint
-      setLoading(false)
-    }
-  }, [userDetails])
+     }, [userDetails])
 
   const loadParties = async () => {
     try {
       setLoading(true)
-      // TODO: Uncomment when backend implements getParties endpoint
-      // const data = await partyService.getParties()
-      // setParties(data)
+      const data = await partyService.getParties()
+      console.log("PARTIES RAW RESPONSE", data, "Type:", typeof data, "IsArray:", Array.isArray(data))
+      
+      // The service should now return Party[] directly
+      if (Array.isArray(data)) {
+        setParties(data)
+      } else {
+        console.error('Expected array from getParties but got:', data)
+        setParties([])
+      }
       setError(null)
-      toast({
-        title: "Info",
-        description: "Party list loading from user details - getParties endpoint not implemented yet",
-      })
     } catch (err) {
       const error = err instanceof Error ? err : new Error("Failed to load parties")
       setError(error)
+      setParties([]) // Reset to empty array on error
       toast({
         title: "Error",
         description: error.message,
