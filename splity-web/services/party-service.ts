@@ -1,6 +1,7 @@
 // Party management service
 
 import { authenticatedApiClient } from "@/lib/authenticated-api-client"
+import { cacheableRequest, cache, CACHE_TTL } from "@/lib/cache"
 import type { Party, CreatePartyInput, BackendApiResponse } from "@/types"
 
 export const partyService = {
@@ -9,15 +10,25 @@ export const partyService = {
     if (!response.success) {
       throw new Error(response.errorMessage || "Failed to create party")
     }
+    
+    // Invalidate parties list cache since we created a new party
+    cache.remove('parties:all')
+    
     return response.data!
   },
 
   async getParty(id: string): Promise<Party> {
-    const response = await authenticatedApiClient.get<BackendApiResponse<Party>>(`/party/${id}`)
-    if (!response.success) {
-      throw new Error(response.errorMessage || "Failed to get party")
-    }
-    return response.data!
+    return cacheableRequest(
+      `party:${id}`,
+      async () => {
+        const response = await authenticatedApiClient.get<BackendApiResponse<Party>>(`/party/${id}`)
+        if (!response.success) {
+          throw new Error(response.errorMessage || "Failed to get party")
+        }
+        return response.data!
+      },
+      CACHE_TTL.FIVE_MINUTES
+    )
   },
 
   async updateParty(id: string, updates: Partial<Party>): Promise<Party> {
@@ -25,6 +36,11 @@ export const partyService = {
     if (!response.success) {
       throw new Error(response.errorMessage || "Failed to update party")
     }
+    
+    // Invalidate cache for this specific party and the parties list
+    cache.remove(`party:${id}`)
+    cache.remove('parties:all')
+    
     return response.data!
   },
 
@@ -33,18 +49,38 @@ export const partyService = {
     if (!response.success) {
       throw new Error(response.errorMessage || "Failed to delete party")
     }
+    
+    // Invalidate cache for this specific party and the parties list
+    cache.remove(`party:${id}`)
+    cache.remove('parties:all')
+  },
+
+  async getParties(): Promise<Party[]> {
+    return cacheableRequest(
+      'parties:all',
+      async () => {
+        console.log('#######FETCHING FROM BACKEND#######')
+        const response = await authenticatedApiClient.get<BackendApiResponse<Party[]>>("/parties")
+        if (!response.success) {
+          throw new Error(response.errorMessage || "Failed to get parties")
+        }
+        // The response.data contains {parties: Party[]}, we need just the array
+        const data = response.data!
+        console.log('Backend response.data:', data)
+        
+        // Handle both possible response formats
+        if (data && typeof data === 'object' && 'parties' in data) {
+          return (data as any).parties as Party[]
+        }
+        
+        // Fallback: if it's already an array, return it
+        return Array.isArray(data) ? data : []
+      },
+      CACHE_TTL.FIVE_MINUTES
+    )
   },
 
   // Note: These endpoints need to be implemented in the backend
-  async getParties(): Promise<Party[]> {
-    throw new Error("getParties endpoint not implemented in backend yet")
-    // const response = await apiClient.get<BackendApiResponse<Party[]>>("/parties")
-    // if (!response.success) {
-    //   throw new Error(response.errorMessage || "Failed to get parties")
-    // }
-    // return response.data!
-  },
-
   async inviteMember(partyId: string, email: string): Promise<Party> {
     throw new Error("inviteMember endpoint not implemented in backend yet")
     // const response = await apiClient.post<BackendApiResponse<Party>>(`/party/${partyId}/invite`, { email })

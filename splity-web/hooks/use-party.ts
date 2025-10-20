@@ -39,7 +39,7 @@ export function useParty(partyId: string | null) {
     if (!party) return
 
     try {
-      const updated = await partyService.updateParty(party.id, updates)
+      const updated = await partyService.updateParty(party.partyId, updates)
       setParty(updated)
       toast({
         title: "Success",
