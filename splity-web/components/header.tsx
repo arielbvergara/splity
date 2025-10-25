@@ -62,23 +62,6 @@ export function Header() {
 
           {/* Navigation */}
           <nav className="flex items-center gap-6">
-            {isClient && isAuthenticated && (
-              <>
-                <Link
-                  href="/dashboard"
-                  className="text-sm font-medium text-foreground transition-colors hover:text-primary"
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  href="/dashboard/analytics"
-                  className="text-sm font-medium text-foreground transition-colors hover:text-primary"
-                >
-                  Analytics
-                </Link>
-              </>
-            )}
-
             <button
               onClick={toggleTheme}
               className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"

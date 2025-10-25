@@ -10,7 +10,7 @@ interface CacheEntry<T> {
 
 class Cache {
   private cache = new Map<string, CacheEntry<any>>()
-  private pendingRequests = new Map<string, Promise<any>>()
+  protected pendingRequests = new Map<string, Promise<any>>()
 
   /**
    * Set a cache entry with TTL in milliseconds
@@ -99,7 +99,7 @@ export async function cacheableRequest<T>(
   }
 
   // Check if there's already a pending request for this key
-  const pendingRequest = cache.pendingRequests.get(cacheKey)
+  const pendingRequest = cache.get(cacheKey)
   if (pendingRequest) {
     return pendingRequest as Promise<T>
   }
@@ -109,16 +109,16 @@ export async function cacheableRequest<T>(
     // Cache the result
     cache.set(cacheKey, result, ttlMs)
     // Remove from pending requests
-    cache.pendingRequests.delete(cacheKey)
+    cache.remove(cacheKey)
     return result
   }).catch((error) => {
     // Remove from pending requests on error too
-    cache.pendingRequests.delete(cacheKey)
+    cache.remove(cacheKey)
     throw error
   })
   
   // Store the pending request
-  cache.pendingRequests.set(cacheKey, requestPromise)
+  cache.set(cacheKey, requestPromise, 5000)
   
   return requestPromise
 }
